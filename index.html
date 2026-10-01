@@ -145,6 +145,9 @@ input[type=range]{width:100%;accent-color:var(--sec,var(--pink));margin:0;height
 .seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg);border-color:var(--sec,var(--pink));box-shadow:0 1px 0 var(--shadow)}
 .seg button:disabled{opacity:.4;cursor:not-allowed}
 .ctl-seg{gap:7px}
+.seg-grid{display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));border-radius:14px}
+.seg-grid button{border-radius:10px;min-width:0;padding:6px 6px}
+.tex-ico{width:16px;height:16px;flex:none}
 .dots{display:inline-flex;flex:none}
 .dots i{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--surface);margin-left:-3px;background:var(--c)}
 .dots i:first-child{margin-left:0}
@@ -305,7 +308,7 @@ const DEF = {
   vignette:0, vigSoft:.5, vigSquare:false,
   brightness:0, contrast:1.25, gamma:1, edges:.25, invert:false,
   mode:'single', strokeLen:6, segments:9000, maxLen:.06, minLen:.012, candidates:24, erase:.22, curve:.45, jitter:0, seed:7,
-  pens:'mono', ink:'#1a1d29', paper:'#fdfdfb', pen:.3, opacity:.6,
+  pens:'mono', ink:'#1a1d29', paper:'#fdfdfb', texture:'none', texSpacing:5, texStrength:.18, pen:.3, opacity:.6,
   animate:true, speed:300, pngSize:2400, transparent:false, view:'lines', overlay:0,
   app:'generate', preset:'Portrait', tool:'pen', handPen:0, brushMm:16, flow:30, steady:.5, spacing:1.5, guide:.35, guideType:'source'
 };
@@ -392,6 +395,9 @@ const SECTIONS = [
     {k:'pens', type:'seg', label:'Pens', opts:[['mono','<span class="dots" aria-hidden="true"><i style="--c:var(--fg)"></i></span>One pen'],['cmy','<span class="dots" aria-hidden="true"><i style="--c:#00a0dc"></i><i style="--c:#e6007e"></i><i style="--c:#ffd200"></i></span>Three pens (CMY)']], act:'process'},
     {k:'ink', type:'color', label:'Ink', show:()=>S.pens==='mono', act:'render'},
     {k:'paper', type:'color', label:'Paper', act:'render'},
+    {k:'texture', type:'seg', label:'Paper texture', opts:[['none','<svg class=\"tex-ico\" viewBox=\"0 0 16 16\" aria-hidden=\"true\"><rect x=\"0.75\" y=\"0.75\" width=\"14.5\" height=\"14.5\" rx=\"3\" fill=\"none\" stroke=\"currentColor\" stroke-opacity=\".35\"/></svg>None'],['dots','<svg class=\"tex-ico\" viewBox=\"0 0 16 16\" aria-hidden=\"true\"><rect x=\"0.75\" y=\"0.75\" width=\"14.5\" height=\"14.5\" rx=\"3\" fill=\"none\" stroke=\"currentColor\" stroke-opacity=\".35\"/><g fill=\"currentColor\"><circle cx=\"4.5\" cy=\"4.5\" r=\"1\"/><circle cx=\"4.5\" cy=\"8\" r=\"1\"/><circle cx=\"4.5\" cy=\"11.5\" r=\"1\"/><circle cx=\"8\" cy=\"4.5\" r=\"1\"/><circle cx=\"8\" cy=\"8\" r=\"1\"/><circle cx=\"8\" cy=\"11.5\" r=\"1\"/><circle cx=\"11.5\" cy=\"4.5\" r=\"1\"/><circle cx=\"11.5\" cy=\"8\" r=\"1\"/><circle cx=\"11.5\" cy=\"11.5\" r=\"1\"/></g></svg>Dots'],['lines','<svg class=\"tex-ico\" viewBox=\"0 0 16 16\" aria-hidden=\"true\"><rect x=\"0.75\" y=\"0.75\" width=\"14.5\" height=\"14.5\" rx=\"3\" fill=\"none\" stroke=\"currentColor\" stroke-opacity=\".35\"/><g stroke=\"currentColor\" stroke-width=\"1\"><path d=\"M3 4.5H13\"/><path d=\"M3 8H13\"/><path d=\"M3 11.5H13\"/></g></svg>Lines'],['grid','<svg class=\"tex-ico\" viewBox=\"0 0 16 16\" aria-hidden=\"true\"><rect x=\"0.75\" y=\"0.75\" width=\"14.5\" height=\"14.5\" rx=\"3\" fill=\"none\" stroke=\"currentColor\" stroke-opacity=\".35\"/><g stroke=\"currentColor\" stroke-width=\"1\"><path d=\"M3 5.5H13M5.5 3V13\"/><path d=\"M3 10.5H13M10.5 3V13\"/></g></svg>Grid'],['canvas','<svg class=\"tex-ico\" viewBox=\"0 0 16 16\" aria-hidden=\"true\"><rect x=\"0.75\" y=\"0.75\" width=\"14.5\" height=\"14.5\" rx=\"3\" fill=\"none\" stroke=\"currentColor\" stroke-opacity=\".35\"/><g stroke=\"currentColor\" stroke-width=\"1.4\" stroke-opacity=\".7\"><path d=\"M2.5 4H13.5M4 2.5V13.5\"/><path d=\"M2.5 6.5H13.5M6.5 2.5V13.5\"/><path d=\"M2.5 9H13.5M9 2.5V13.5\"/><path d=\"M2.5 11.5H13.5M11.5 2.5V13.5\"/></g></svg>Canvas'],['grain','<svg class=\"tex-ico\" viewBox=\"0 0 16 16\" aria-hidden=\"true\"><rect x=\"0.75\" y=\"0.75\" width=\"14.5\" height=\"14.5\" rx=\"3\" fill=\"none\" stroke=\"currentColor\" stroke-opacity=\".35\"/><g fill=\"currentColor\"><rect x=\"3\" y=\"4\" width=\"1.2\" height=\"1.2\"/><rect x=\"6.5\" y=\"3\" width=\"1.2\" height=\"1.2\"/><rect x=\"10\" y=\"5\" width=\"1.2\" height=\"1.2\"/><rect x=\"12\" y=\"9\" width=\"1.2\" height=\"1.2\"/><rect x=\"4.5\" y=\"8\" width=\"1.2\" height=\"1.2\"/><rect x=\"8\" y=\"10\" width=\"1.2\" height=\"1.2\"/><rect x=\"11\" y=\"12.5\" width=\"1.2\" height=\"1.2\"/><rect x=\"3.5\" y=\"12\" width=\"1.2\" height=\"1.2\"/><rect x=\"7\" y=\"6.5\" width=\"1.2\" height=\"1.2\"/><rect x=\"9.5\" y=\"8\" width=\"1.2\" height=\"1.2\"/></g></svg>Grain']], cols:3, act:'render'},
+    {k:'texSpacing', type:'range', label:'Texture spacing', min:2, max:20, step:.5, fmt:v=>(+v).toFixed(1)+' mm', show:()=>['dots','lines','grid'].includes(S.texture), act:'render'},
+    {k:'texStrength', type:'range', label:'Texture strength', min:.03, max:.6, step:.01, fmt:f.pct, show:()=>S.texture!=='none', act:'render', hint:'Texture is part of the paper. It appears on screen and in PNG and PDF exports, but not in the SVG, so a plotter won’t draw it.'},
     {k:'pen', type:'range', label:'Pen tip', min:.05, max:2, step:.05, fmt:f.mm, act:'render'},
     {k:'opacity', type:'range', label:'Ink opacity', min:.05, max:1, step:.01, fmt:f.pct, act:'render'}
   ]},
@@ -424,7 +430,7 @@ function buildCtl(d){
     rec.input.addEventListener('input', () => set(d.k, parseFloat(rec.input.value)));
     w.querySelector('label').addEventListener('dblclick', () => set(d.k, DEF[d.k]));
   } else if (d.type === 'seg'){
-    w.innerHTML = (d.label ? `<span class="ctl-lab">${d.label}</span>` : '') + `<div class="seg" role="group"${d.label ? ` aria-label="${d.label}"` : ''}></div>`;
+    w.innerHTML = (d.label ? `<span class="ctl-lab">${d.label}</span>` : '') + `<div class="seg${d.cols ? ' seg-grid' : ''}" role="group"${d.cols ? ` style="--cols:${d.cols}"` : ''}${d.label ? ` aria-label="${d.label}"` : ''}></div>`;
     const seg = w.querySelector('.seg'); rec.btns = [];
     for (const [v, lab] of d.opts){
       const b = document.createElement('button'); b.type = 'button'; if (/</.test(lab)) b.innerHTML = lab; else b.textContent = lab; b.dataset.v = v;
@@ -789,7 +795,51 @@ function drawAll(ctx, k, final, curs, pens){
 function paintBase(ctx, w, h, transparent){
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   ctx.clearRect(0, 0, w, h);
-  if (!transparent){ ctx.fillStyle = S.paper; ctx.fillRect(0, 0, w, h); }
+  if (!transparent){ ctx.fillStyle = S.paper; ctx.fillRect(0, 0, w, h); drawTexture(ctx, w, h); }
+}
+const texColor = () => S.pens === 'cmy' ? '#3a3f5c' : S.ink;
+function texRng(seed){ return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const texCache = {};
+function texTile(kind, ppm){
+  const key = kind + '|' + ppm.toFixed(2) + '|' + texColor();
+  if (texCache[key]) return texCache[key];
+  const mmSize = kind === 'canvas' ? 12 : 30, px = Math.max(16, Math.min(1400, Math.round(mmSize * ppm)));
+  const c = mk(px, px), g = c.getContext('2d'), R = texRng(kind === 'canvas' ? 11 : 23), sc = px / mmSize;
+  g.fillStyle = texColor();
+  if (kind === 'canvas'){
+    const t = .55 * sc, n = Math.round(mmSize / .55);
+    for (let i = 0; i < n; i++){
+      g.globalAlpha = .25 + R() * .55; g.fillRect(0, i * t, px, t * .55);
+      g.globalAlpha = .25 + R() * .55; g.fillRect(i * t, 0, t * .55, px);
+    }
+    for (let i = 0; i < n * n * .6; i++){ g.globalAlpha = R() * .5; g.fillRect(R() * px, R() * px, sc * (.15 + R() * .4), sc * (.1 + R() * .2)); }
+  } else {
+    const count = Math.round(mmSize * mmSize * 9);
+    for (let i = 0; i < count; i++){ g.globalAlpha = R() * R(); const d = sc * (.06 + R() * .14); g.fillRect(R() * px, R() * px, d, d); }
+  }
+  return texCache[key] = c;
+}
+function drawTexture(ctx, w, h){
+  if (!S.texture || S.texture === 'none') return;
+  const ppm = w / outW(), a = S.texStrength;
+  ctx.save(); ctx.globalAlpha = a; ctx.fillStyle = ctx.strokeStyle = texColor();
+  if (S.texture === 'canvas' || S.texture === 'grain'){
+    ctx.globalAlpha = Math.min(1, a * (S.texture === 'canvas' ? 1.1 : 1.6));
+    ctx.fillStyle = ctx.createPattern(texTile(S.texture, ppm), 'repeat'); ctx.fillRect(0, 0, w, h);
+  } else {
+    const sp = S.texSpacing * ppm, off = sp / 2;
+    if (S.texture === 'dots'){
+      const r = Math.max(.6, .3 * ppm); ctx.beginPath();
+      for (let y = off; y < h; y += sp) for (let x = off; x < w; x += sp){ ctx.moveTo(x + r, y); ctx.arc(x, y, r, 0, Math.PI * 2); }
+      ctx.fill();
+    } else {
+      ctx.lineWidth = Math.max(.75, .15 * ppm); ctx.beginPath();
+      for (let y = off; y < h; y += sp){ ctx.moveTo(0, y); ctx.lineTo(w, y); }
+      if (S.texture === 'grid') for (let x = off; x < w; x += sp){ ctx.moveTo(x, 0); ctx.lineTo(x, h); }
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
 }
 function drawSource(ctx, k, alpha){
   const r = map.inner, fi = map.fit;
@@ -944,7 +994,28 @@ async function buildPDF(){
   const PW = ow * pt, PH = oh * pt, k = PW / W, c = S.curve, n2 = v => (Math.round(v * 100) / 100).toString();
   const rgb = hex => { const h = hex.replace('#', ''); return [0, 2, 4].map(i => n2(parseInt(h.substr(i, 2), 16) / 255)).join(' '); };
   const ops = [];
-  if (!S.transparent) ops.push(`${rgb(S.paper)} rg 0 0 ${n2(PW)} ${n2(PH)} re f`);
+  let bgImg = null;
+  if (!S.transparent){
+    if (S.texture === 'canvas' || S.texture === 'grain'){
+      const ppm = Math.min(6, 3000 / Math.max(ow, oh)), iw = Math.round(ow * ppm), ih = Math.round(oh * ppm), bc = mk(iw, ih), bx = bc.getContext('2d');
+      bx.fillStyle = S.paper; bx.fillRect(0, 0, iw, ih); drawTexture(bx, iw, ih);
+      const jb = await new Promise(res => bc.toBlob(res, 'image/jpeg', .9));
+      bgImg = {w:iw, h:ih, data:new Uint8Array(await jb.arrayBuffer())};
+      ops.push(`q ${n2(PW)} 0 0 ${n2(PH)} 0 0 cm /Im1 Do Q`);
+    } else {
+      ops.push(`${rgb(S.paper)} rg 0 0 ${n2(PW)} ${n2(PH)} re f`);
+      if (S.texture === 'dots' || S.texture === 'lines' || S.texture === 'grid'){
+        const sp = S.texSpacing * pt, t = [`q /GS2 gs ${rgb(texColor())} RG ${rgb(texColor())} rg 1 J`];
+        if (S.texture === 'dots'){ t.push(`${n2(.6 * pt)} w`); for (let y = sp/2; y < PH; y += sp) for (let x = sp/2; x < PW; x += sp) t.push(`${n2(x)} ${n2(PH - y)} m ${n2(x)} ${n2(PH - y)} l S`); }
+        else {
+          t.push(`${n2(.15 * pt)} w`);
+          for (let y = sp/2; y < PH; y += sp) t.push(`0 ${n2(PH - y)} m ${n2(PW)} ${n2(PH - y)} l S`);
+          if (S.texture === 'grid') for (let x = sp/2; x < PW; x += sp) t.push(`${n2(x)} 0 m ${n2(x)} ${n2(PH)} l S`);
+        }
+        t.push('Q'); ops.push(t.join('\n'));
+      }
+    }
+  }
   ops.push(`1 J 1 j ${n2(S.pen * pt)} w /GS1 gs`);
   exportPens().forEach(P => {
     ops.push(`${rgb(S.pens === 'cmy' ? P.color : S.ink)} RG`);
@@ -972,17 +1043,20 @@ async function buildPDF(){
   const objs = [
     '<< /Type /Catalog /Pages 2 0 R >>',
     '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
-    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${n2(PW)} ${n2(PH)}] /Resources << /ExtGState << /GS1 5 0 R >> >> /Contents 4 0 R >>`,
+    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${n2(PW)} ${n2(PH)}] /Resources << /ExtGState << /GS1 5 0 R /GS2 7 0 R >>${bgImg ? ' /XObject << /Im1 8 0 R >>' : ''} >> /Contents 4 0 R >>`,
     null,
     `<< ${gs} >>`,
-    `<< /Title (${title}) /Creator (Penwander) /Producer (Penwander) >>`
+    `<< /Title (${title}) /Creator (Penwander) /Producer (Penwander) >>`,
+    `<< /Type /ExtGState /CA ${n2(S.texStrength)} /ca ${n2(S.texStrength)} >>`
   ];
+  if (bgImg) objs.push({head:`<< /Type /XObject /Subtype /Image /Width ${bgImg.w} /Height ${bgImg.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${bgImg.data.length} >>`, data:bgImg.data});
   const parts = [], offs = []; let len = 0;
   const add = x => { const b = typeof x === 'string' ? enc.encode(x) : x; parts.push(b); len += b.length; };
   add('%PDF-1.4\n');
   objs.forEach((o, i) => {
     offs.push(len);
     if (o === null){ add(`${i+1} 0 obj\n<< /Length ${content.length}${filter} >>\nstream\n`); add(content); add('\nendstream\nendobj\n'); }
+    else if (typeof o === 'object'){ add(`${i+1} 0 obj\n${o.head}\nstream\n`); add(o.data); add('\nendstream\nendobj\n'); }
     else add(`${i+1} 0 obj\n${o}\nendobj\n`);
   });
   const xref = len;
