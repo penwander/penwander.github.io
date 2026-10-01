@@ -98,7 +98,7 @@ main{display:grid;grid-template-columns:minmax(0,1fr) 372px;gap:16px;min-height:
 .toolbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 14px;padding:10px 12px;margin:10px 10px 0;background:var(--surface);border-radius:14px;box-shadow:0 2px 0 var(--shadow)}
 .toolbar .left,.toolbar .right{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
 .toolbar .ctl{margin:0;min-width:0;--sec:var(--pink)}
-.toolbar .ctl.range{width:170px}
+.toolbar .ctl-range{width:170px}
 .sheet-area{position:relative;display:grid;place-items:center;min-height:0;overflow:hidden}
 .sheet{position:relative;box-shadow:0 2px 0 rgba(0,0,0,.08),0 24px 50px -12px rgba(8,10,60,.55)}
 .sheet canvas{display:block;width:100%;height:100%}
@@ -140,10 +140,20 @@ main{display:grid;grid-template-columns:minmax(0,1fr) 372px;gap:16px;min-height:
 .hint{font-size:11.5px;color:var(--muted);line-height:1.4;margin:0}
 input[type=range]{width:100%;accent-color:var(--sec,var(--pink));margin:0;height:20px;cursor:pointer}
 .seg{display:flex;flex-wrap:wrap;background:var(--sunk);border-radius:999px;padding:3px;gap:2px}
-.seg button{flex:1 1 auto;border:1.5px solid transparent;background:transparent;border-radius:999px;padding:5px 10px;font-size:12.5px;font-weight:600;cursor:pointer;color:var(--muted);white-space:nowrap;transition:background .15s,color .15s}
+.seg button{flex:1 1 0;min-width:max-content;display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1.5px solid transparent;background:transparent;border-radius:999px;padding:5px 10px;font-size:12.5px;font-weight:600;cursor:pointer;color:var(--muted);white-space:nowrap;transition:background .15s,color .15s}
 .seg button:hover{color:var(--fg)}
 .seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg);border-color:var(--sec,var(--pink));box-shadow:0 1px 0 var(--shadow)}
 .seg button:disabled{opacity:.4;cursor:not-allowed}
+.ctl-seg{gap:7px}
+.dots{display:inline-flex;flex:none}
+.dots i{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--surface);margin-left:-3px;background:var(--c)}
+.dots i:first-child{margin-left:0}
+.style-ico{width:22px;height:12px;flex:none;overflow:visible}
+.rand-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
+.rand-row .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:8px 10px}
+.rand-row svg{width:16px;height:16px;flex:none}
+.preset[aria-pressed="true"]{border-color:var(--fg);box-shadow:3px 3px 0 var(--c)}
+.preset[aria-pressed="true"] b::after{content:" ✓";color:var(--c)}
 .switch{display:flex;align-items:center;gap:10px;font-size:12.5px;font-weight:600;cursor:pointer}
 .switch input{appearance:none;width:34px;height:20px;border-radius:10px;background:var(--rule);position:relative;cursor:pointer;flex:none;margin:0;transition:background .15s}
 .switch input::after{content:"";position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:var(--surface);transition:transform .15s}
@@ -249,6 +259,10 @@ img{max-width:100%}
       <div>
         <p class="eyebrow">Starting points</p>
         <div class="presets" id="presets"></div>
+        <div class="rand-row">
+          <button class="btn primary" type="button" id="btnRandom" title="Pick any starting point with a new seed"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="13" height="13" rx="3" fill="none" stroke="currentColor" stroke-width="1.6"/><g fill="currentColor"><circle cx="5" cy="5" r="1.2"/><circle cx="11" cy="5" r="1.2"/><circle cx="8" cy="8" r="1.2"/><circle cx="5" cy="11" r="1.2"/><circle cx="11" cy="11" r="1.2"/></g></svg>Random</button>
+          <button class="btn" type="button" id="btnSeed" title="Same starting point, new seed"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2.5v3h-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>New seed</button>
+        </div>
       </div>
       <div id="controls" style="display:flex;flex-direction:column;gap:10px"></div>
       <p class="foot">Shortcuts: <kbd>Space</kbd> pause, <kbd>R</kbd> redraw, <kbd>N</kbd> new variation. On the Trace page: <kbd>P</kbd> pen, <kbd>B</kbd> line brush, <kbd>E</kbd> eraser, <kbd>[</kbd> <kbd>]</kbd> brush size, <kbd>Ctrl</kbd>+<kbd>Z</kbd> undo. Double-click a slider label to reset it. Paste or drop an image anywhere on the page. Inspired by <a href="https://javier.xyz/pintr" target="_blank" rel="noopener">PINTR</a> by javierbyte.</p>
@@ -288,7 +302,7 @@ const DEF = {
   mode:'single', strokeLen:6, segments:9000, maxLen:.06, minLen:.012, candidates:24, erase:.22, curve:.45, jitter:0, seed:7,
   pens:'mono', ink:'#1a1d29', paper:'#fdfdfb', pen:.3, opacity:.6,
   animate:true, speed:300, pngSize:2400, transparent:false, view:'lines', overlay:0,
-  app:'generate', tool:'pen', handPen:0, brushMm:16, flow:30, steady:.5, spacing:1.5, guide:.35, guideType:'source'
+  app:'generate', preset:'Portrait', tool:'pen', handPen:0, brushMm:16, flow:30, steady:.5, spacing:1.5, guide:.35, guideType:'source'
 };
 const PRESETS = [
   {name:'Portrait', c:'pink', g:'<svg viewBox="0 0 38 28"><path d="M3 18 C 8 4, 14 26, 19 13 S 30 6, 35 12" fill="none" stroke="var(--fg)" stroke-width="2" stroke-linecap="round"/></svg>', hint:'One continuous, softly curved line', v:{mode:'single', segments:9000, maxLen:.06, minLen:.012, candidates:24, erase:.22, curve:.45, jitter:0, pen:.3, opacity:.6, pens:'mono', contrast:1.25, edges:.25}},
@@ -354,7 +368,7 @@ const SECTIONS = [
     {k:'invert', type:'toggle', label:'Invert (draw the light areas)', act:'process'}
   ]},
   {title:'Line', open:true, items:[
-    {k:'mode', type:'seg', label:'Drawing style', opts:[['single','Single line'],['strokes','Separate strokes']], act:'restart'},
+    {k:'mode', type:'seg', label:'Drawing style', opts:[['single','<svg class="style-ico" viewBox="0 0 22 12" aria-hidden="true"><path d="M1 9 C5 1 9 12 13 5 S19 2 21 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Single line'],['strokes','<svg class="style-ico" viewBox="0 0 22 12" aria-hidden="true"><g stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 10 L5 2"/><path d="M8 10 L11 2"/><path d="M14 10 L17 2"/><path d="M19 9 L21 4"/></g></svg>Separate strokes']], act:'restart'},
     {k:'strokeLen', type:'range', label:'Segments per stroke', min:1, max:40, step:1, fmt:f.int, show:()=>S.mode==='strokes', act:'restart'},
     {k:'segments', type:'range', label:'Line count', min:500, max:40000, step:500, fmt:f.int, show:()=>!isTrace(), act:'restart'},
     {k:'maxLen', type:'range', label:'Longest segment', min:.01, max:.3, step:.005, fmt:f.lenmm, act:'restart'},
@@ -366,7 +380,7 @@ const SECTIONS = [
     {k:'seed', type:'seed', label:'Seed', show:()=>!isTrace(), act:'restart'}
   ]},
   {title:'Pen', open:true, items:[
-    {k:'pens', type:'seg', label:'Pens', opts:[['mono','One pen'],['cmy','Cyan · Magenta · Yellow']], act:'process'},
+    {k:'pens', type:'seg', label:'Pens', opts:[['mono','<span class="dots" aria-hidden="true"><i style="--c:var(--fg)"></i></span>One pen'],['cmy','<span class="dots" aria-hidden="true"><i style="--c:#00a0dc"></i><i style="--c:#e6007e"></i><i style="--c:#ffd200"></i></span>Three pens (CMY)']], act:'process'},
     {k:'ink', type:'color', label:'Ink', show:()=>S.pens==='mono', act:'render'},
     {k:'paper', type:'color', label:'Paper', act:'render'},
     {k:'pen', type:'range', label:'Pen tip', min:.05, max:2, step:.05, fmt:f.mm, act:'render'},
@@ -391,7 +405,7 @@ const TOOL_ITEMS = [
 
 const ctls = [];
 function buildCtl(d){
-  const w = document.createElement('div'); w.className = 'ctl ' + (d.type || '');
+  const w = document.createElement('div'); w.className = 'ctl ctl-' + (d.type || 'x');
   const id = 'c-' + (d.k || d.type);
   const rec = {d, w};
   if (d.k) ACT[d.k] = d.act;
@@ -404,7 +418,7 @@ function buildCtl(d){
     w.innerHTML = (d.label ? `<span class="ctl-lab">${d.label}</span>` : '') + `<div class="seg" role="group"${d.label ? ` aria-label="${d.label}"` : ''}></div>`;
     const seg = w.querySelector('.seg'); rec.btns = [];
     for (const [v, lab] of d.opts){
-      const b = document.createElement('button'); b.type = 'button'; b.textContent = lab; b.dataset.v = v;
+      const b = document.createElement('button'); b.type = 'button'; if (/</.test(lab)) b.innerHTML = lab; else b.textContent = lab; b.dataset.v = v;
       b.addEventListener('click', () => set(d.k, typeof DEF[d.k] === 'number' ? +v : v));
       seg.append(b); rec.btns.push(b);
     }
@@ -425,7 +439,7 @@ function buildCtl(d){
     rec.input = w.querySelector('input');
     rec.input.addEventListener('input', () => set(d.k, rec.input.value || ' '));
   } else if (d.type === 'seed'){
-    w.innerHTML = `<label class="ctl-lab" for="${id}">${d.label}</label><div class="seed-row"><input type="number" id="${id}" min="1" max="999999" step="1"><button class="btn" type="button">Random</button></div>`;
+    w.innerHTML = `<label class="ctl-lab" for="${id}">${d.label}</label><div class="seed-row"><input type="number" id="${id}" min="1" max="999999" step="1"><button class="btn" type="button" title="Same starting point, new variation">New seed</button></div>`;
     rec.input = w.querySelector('input');
     rec.input.addEventListener('change', () => { const v = Math.max(1, Math.floor(+rec.input.value || 1)); set('seed', v); });
     w.querySelector('button').addEventListener('click', newSeed);
@@ -462,9 +476,12 @@ function buildUI(){
     const b = document.createElement('button'); b.type = 'button'; b.className = 'preset';
     b.style.setProperty('--c', `var(--${p.c})`);
     b.innerHTML = `<span class="glyph">${p.g}</span><span><b>${p.name}</b><small>${p.hint}</small></span>`;
-    b.addEventListener('click', () => { Object.assign(S, p.v); persist(); sync(); process(); toast(`Applied “${p.name}”`); });
+    b.dataset.preset = p.name;
+    b.addEventListener('click', () => { applyPreset(p); toast(`Applied “${p.name}”`); });
     pr.append(b);
   });
+  $('#btnRandom').addEventListener('click', randomPreset);
+  $('#btnSeed').addEventListener('click', newSeed);
 }
 function sync(){
   secEls.forEach(([el, fn]) => el.hidden = !fn());
@@ -474,6 +491,8 @@ function sync(){
   $('#genActions').hidden = isTrace(); $('#traceActions').hidden = !isTrace();
   const ring = $('#ring'); ring.classList.toggle('erase', S.tool === 'erase'); if (!isTrace() || S.tool === 'pen') ring.hidden = true;
   updateUndoBtns();
+  document.querySelectorAll('.preset').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.preset === S.preset)));
+  $('#btnSeed').hidden = isTrace();
   for (const r of ctls){
     const d = r.d, v = S[d.k];
     if (d.show) r.w.hidden = !d.show();
@@ -840,6 +859,17 @@ function updatePauseBtn(){
   b.disabled = !!(gen && gen.done);
 }
 function newSeed(){ set('seed', 1 + Math.floor(Math.random() * 99999)); }
+function applyPreset(p, seed){
+  Object.assign(S, {ink:DEF.ink, paper:DEF.paper, pens:'mono'}, p.v, {preset:p.name});
+  if (seed) S.seed = seed;
+  persist(); sync(); process();
+}
+function randomPreset(){
+  const others = PRESETS.filter(p => p.name !== S.preset);
+  const p = others[Math.floor(Math.random() * others.length)] || PRESETS[0];
+  applyPreset(p, 1 + Math.floor(Math.random() * 99999));
+  toast(`Random: “${p.name}”`);
+}
 
 // ---------- Export ----------
 function renderPNG(){
