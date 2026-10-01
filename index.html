@@ -354,7 +354,7 @@ const SECTIONS = [
   ]},
   {title:'Paper & framing', open:true, items:[
     {k:'ratio', type:'select', label:'Format', opts:Object.entries(RATIOS).map(([k,v])=>[k,v.label]), act:'process'},
-    {k:'outMm', type:'range', label:'Output width', min:50, max:800, step:5, fmt:v=>Math.round(v)+' mm', show:()=>!RATIOS[S.ratio].mm, act:'render', hint:'Physical width used for pen size, SVG and coordinates.'},
+    {k:'outMm', type:'range', label:'Output width', min:50, max:800, step:5, fmt:v=>Math.round(v)+' mm', show:()=>!RATIOS[S.ratio].mm, act:'render', hint:'Physical width used for pen size, SVG and PDF.'},
     {k:'padding', type:'range', label:'Margin', min:0, max:.3, step:.005, fmt:v=>{ const a = map ? map.W/map.H : (RATIOS[S.ratio].r || 1); return f.lenmm(v * Math.min(1, 1/a)); }, act:'process'},
     {k:'vignette', type:'range', label:'Vignette', min:0, max:1, step:.01, fmt:f.pct, act:'process'},
     {k:'vigSoft', type:'range', label:'Vignette softness', min:0, max:1, step:.01, fmt:f.pct, show:()=>S.vignette>0, act:'process'},
@@ -447,10 +447,10 @@ function buildCtl(d){
     w.innerHTML = `<div class="drop"><button class="btn" type="button" id="btnUpload">Choose an image…</button><p>Or drop or paste one onto the page. Faces and subjects on light backgrounds with good contrast trace best.</p></div>`;
     w.querySelector('button').addEventListener('click', () => $('#file').click());
   } else if (d.type === 'export'){
-    w.innerHTML = `<div class="btn-grid"><button class="btn primary" type="button" id="exPng">PNG</button><button class="btn primary" type="button" id="exSvg">SVG</button><button class="btn primary" type="button" id="exTxt">TXT</button></div>
-      <div class="btn-grid" style="grid-template-columns:repeat(2,minmax(0,1fr))"><button class="btn" type="button" id="cpSvg">Copy SVG</button><button class="btn" type="button" id="cpTxt">Copy coordinates</button></div>
-      <p class="hint">SVG is sized in millimetres, one path per pen, ready for a plotter. TXT lists x,y rows in mm, origin top left, a blank line at each pen lift.</p>
-      <p class="hint" id="dlNote" hidden>File downloads aren't available in this view. Use the copy buttons instead.</p>`;
+    w.innerHTML = `<div class="btn-grid"><button class="btn primary" type="button" id="exPng">PNG</button><button class="btn primary" type="button" id="exSvg">SVG</button><button class="btn primary" type="button" id="exPdf">PDF</button></div>
+      <button class="btn" type="button" id="cpSvg">Copy SVG</button>
+      <p class="hint">SVG and PDF are vector files at the real paper size. SVG has one path per pen, ready for a plotter. PDF prints at actual size; choose “Actual size” or 100% in the print dialog.</p>
+      <p class="hint" id="dlNote" hidden>File downloads aren't available in this view. Use Copy SVG instead.</p>`;
   }
   if (d.hint && d.type !== 'export'){ const p = document.createElement('p'); p.className = 'hint'; p.textContent = d.hint; w.append(p); }
   ctls.push(rec);
@@ -912,18 +912,56 @@ function buildSVG(){
   });
   return out + '</svg>\n';
 }
-function buildTXT(){
-  const ow = outW(), s = ow / map.W, oh = ow * map.H / map.W;
-  const lines = [`# Penwander coordinates · units: mm · origin: top left · sheet ${r2(ow)} x ${r2(oh)} mm · seed ${S.seed}`];
+async function buildPDF(){
+  const W = map.W, H = map.H, ow = outW(), oh = ow * H / W, pt = 72 / 25.4;
+  const PW = ow * pt, PH = oh * pt, k = PW / W, c = S.curve, n2 = v => (Math.round(v * 100) / 100).toString();
+  const rgb = hex => { const h = hex.replace('#', ''); return [0, 2, 4].map(i => n2(parseInt(h.substr(i, 2), 16) / 255)).join(' '); };
+  const ops = [];
+  if (!S.transparent) ops.push(`${rgb(S.paper)} rg 0 0 ${n2(PW)} ${n2(PH)} re f`);
+  ops.push(`1 J 1 j ${n2(S.pen * pt)} w /GS1 gs`);
   exportPens().forEach(P => {
-    lines.push(`# pen: ${S.pens === 'cmy' ? P.name : 'ink ' + S.ink}`);
+    ops.push(`${rgb(S.pens === 'cmy' ? P.color : S.ink)} RG`);
     P.runs.forEach((run, ri) => {
-      const {X, Y, n} = makeXY(P, ri, s); if (n < 2) return;
-      for (let i = 0; i < n; i++) lines.push(`${X(i).toFixed(2)},${Y(i).toFixed(2)}`);
-      lines.push('');
+      const {X, Y, n} = makeXY(P, ri, 1); if (n < 2) return;
+      const x = i => n2(X(i) * k), y = i => n2(PH - Y(i) * k);
+      const seg = [`${x(0)} ${y(0)} m`];
+      for (let i = 0; i < n - 1; i++){
+        if (c > 0 && n > 2){
+          const a = Math.max(0, i-1), b = Math.min(n-1, i+2);
+          const c1x = X(i) + (X(i+1)-X(a))*c/6, c1y = Y(i) + (Y(i+1)-Y(a))*c/6, c2x = X(i+1) - (X(b)-X(i))*c/6, c2y = Y(i+1) - (Y(b)-Y(i))*c/6;
+          seg.push(`${n2(c1x*k)} ${n2(PH-c1y*k)} ${n2(c2x*k)} ${n2(PH-c2y*k)} ${x(i+1)} ${y(i+1)} c`);
+        } else seg.push(`${x(i+1)} ${y(i+1)} l`);
+      }
+      ops.push(seg.join(' ') + ' S');
     });
   });
-  return lines.join('\n');
+  const enc = new TextEncoder();
+  let content = enc.encode(ops.join('\n')), filter = '';
+  if (typeof CompressionStream === 'function'){
+    try { content = new Uint8Array(await new Response(new Blob([content]).stream().pipeThrough(new CompressionStream('deflate'))).arrayBuffer()); filter = ' /Filter /FlateDecode'; } catch(e){}
+  }
+  const gs = `/Type /ExtGState /CA ${n2(S.opacity)}${S.pens === 'cmy' ? ' /BM /Multiply' : ''}`;
+  const title = isTrace() ? 'Penwander (hand traced)' : `Penwander (seed ${S.seed})`;
+  const objs = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${n2(PW)} ${n2(PH)}] /Resources << /ExtGState << /GS1 5 0 R >> >> /Contents 4 0 R >>`,
+    null,
+    `<< ${gs} >>`,
+    `<< /Title (${title}) /Creator (Penwander) /Producer (Penwander) >>`
+  ];
+  const parts = [], offs = []; let len = 0;
+  const add = x => { const b = typeof x === 'string' ? enc.encode(x) : x; parts.push(b); len += b.length; };
+  add('%PDF-1.4\n');
+  objs.forEach((o, i) => {
+    offs.push(len);
+    if (o === null){ add(`${i+1} 0 obj\n<< /Length ${content.length}${filter} >>\nstream\n`); add(content); add('\nendstream\nendobj\n'); }
+    else add(`${i+1} 0 obj\n${o}\nendobj\n`);
+  });
+  const xref = len;
+  add(`xref\n0 ${objs.length + 1}\n0000000000 65535 f \n` + offs.map(o => String(o).padStart(10, '0') + ' 00000 n \n').join(''));
+  add(`trailer\n<< /Size ${objs.length + 1} /Root 1 0 R /Info 6 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
+  return new Blob(parts, {type:'application/pdf'});
 }
 let dlP = null;
 function getDl(){
@@ -934,13 +972,13 @@ async function saveFile(name, data){
   const dl = await getDl();
   if (!dl){
     try {
-      const types = {png:'image/png', svg:'image/svg+xml', txt:'text/plain'};
+      const types = {png:'image/png', svg:'image/svg+xml', pdf:'application/pdf'};
       const blob = data instanceof Blob ? data : new Blob([data], {type: (types[name.split('.').pop()] || 'application/octet-stream') + ';charset=utf-8'});
       const href = URL.createObjectURL(blob), a = document.createElement('a');
       a.href = href; a.download = name; document.body.append(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(href), 4000);
       toast('Saved ' + name);
-    } catch(e){ $('#dlNote').hidden = false; toast('Your browser blocked the download. Use the copy buttons instead.'); }
+    } catch(e){ $('#dlNote').hidden = false; toast('Your browser blocked the download. Use Copy SVG instead.'); }
     return;
   }
   try { const r = await dl.save({filename:name, data}); if (r && r.status === 'saved') toast('Saved ' + name); }
@@ -958,9 +996,8 @@ function copyText(txt, what){
 function wireExport(){
   $('#exPng').addEventListener('click', () => { if (!hasLines()) return; renderPNG().toBlob(b => b ? saveFile(fileBase() + '.png', b) : toast('Couldn’t render the PNG. Try a smaller size.'), 'image/png'); });
   $('#exSvg').addEventListener('click', () => hasLines() && saveFile(fileBase() + '.svg', buildSVG()));
-  $('#exTxt').addEventListener('click', () => hasLines() && saveFile(fileBase() + '.txt', buildTXT()));
+  $('#exPdf').addEventListener('click', async () => { if (!hasLines()) return; try { saveFile(fileBase() + '.pdf', await buildPDF()); } catch(e){ toast('Couldn’t build the PDF.'); } });
   $('#cpSvg').addEventListener('click', () => hasLines() && copyText(buildSVG(), 'SVG'));
-  $('#cpTxt').addEventListener('click', () => hasLines() && copyText(buildTXT(), 'Coordinates'));
 }
 
 // ---------- Trace & draw ----------
