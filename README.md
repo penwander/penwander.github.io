@@ -23,6 +23,7 @@ Everything runs in the browser. Images are never uploaded anywhere.
 | `favicon.svg` | Browser-tab icon |
 | `apple-touch-icon.png`, `icon-512.png` | Home-screen icons |
 | `og-image.png` | Preview image shown when the link is shared |
+| `terms.html`, `privacy.html` | Terms & Conditions and Privacy Policy pages |
 
 No build step. Edit `index.html` and commit; GitHub Pages redeploys automatically.
 
