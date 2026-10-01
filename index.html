@@ -165,6 +165,11 @@ input[type=number]{font-family:var(--mono);font-size:12px;font-variant-numeric:t
 .color-row{display:flex;align-items:center;gap:8px}
 .color-row input[type=color]{width:34px;height:26px;border:1.5px solid var(--rule);border-radius:8px;padding:0;background:none;cursor:pointer}
 .color-row output{font:11px var(--mono);color:var(--muted)}
+.crop-row{display:flex;align-items:center;gap:8px}
+.crop-row .ctl-lab{margin-right:auto}
+#btnCrop[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+body.cropping .sheet canvas{cursor:grab;touch-action:none}
+body.cropping.dragging .sheet canvas{cursor:grabbing}
 .seed-row{display:flex;gap:6px}
 .seed-row input{flex:1;min-width:0}
 .btn{border:1.5px solid var(--fg);background:var(--surface);border-radius:999px;padding:6px 14px;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;transition:transform .12s,box-shadow .12s}
@@ -296,7 +301,7 @@ const RATIOS = {
 const CMY = [{name:'cyan', color:'#00a0dc'}, {name:'magenta', color:'#e6007e'}, {name:'yellow', color:'#ffd200'}];
 
 const DEF = {
-  source:'still', text:'Penwander', fit:'cover', ratio:'a4p', outMm:200, padding:.05,
+  source:'still', text:'Penwander', fit:'cover', cropZoom:1, cropX:.5, cropY:.5, ratio:'a4p', outMm:200, padding:.05,
   vignette:0, vigSoft:.5, vigSquare:false,
   brightness:0, contrast:1.25, gamma:1, edges:.25, invert:false,
   mode:'single', strokeLen:6, segments:9000, maxLen:.06, minLen:.012, candidates:24, erase:.22, curve:.45, jitter:0, seed:7,
@@ -350,7 +355,11 @@ const SECTIONS = [
     {k:'source', type:'seg', opts:[['still','Still life'],['ramp','Tone ramp'],['text','Lettering'],['upload','Your image']], act:'process'},
     {k:'text', type:'text', label:'Lettering text', show:()=>S.source==='text', act:'process'},
     {type:'drop'},
-    {k:'fit', type:'seg', label:'Placement', opts:[['cover','Fill frame'],['contain','Fit inside']], act:'process'}
+    {k:'fit', type:'seg', label:'Placement', opts:[['cover','Fill frame'],['contain','Fit inside']], act:'process'},
+    {type:'crop', show:()=>S.fit==='cover'},
+    {k:'cropZoom', type:'range', label:'Zoom', min:1, max:4, step:.01, fmt:f.pct, show:()=>S.fit==='cover', act:'process'},
+    {k:'cropX', type:'range', label:'Left ↔ right', min:0, max:1, step:.005, fmt:v=>v < .02 ? 'Left' : v > .98 ? 'Right' : Math.round(v*100) + '%', show:()=>S.fit==='cover', act:'process'},
+    {k:'cropY', type:'range', label:'Top ↕ bottom', min:0, max:1, step:.005, fmt:v=>v < .02 ? 'Top' : v > .98 ? 'Bottom' : Math.round(v*100) + '%', show:()=>S.fit==='cover', act:'process'}
   ]},
   {title:'Paper & framing', open:true, items:[
     {k:'ratio', type:'select', label:'Format', opts:Object.entries(RATIOS).map(([k,v])=>[k,v.label]), act:'process'},
@@ -443,6 +452,10 @@ function buildCtl(d){
     rec.input = w.querySelector('input');
     rec.input.addEventListener('change', () => { const v = Math.max(1, Math.floor(+rec.input.value || 1)); set('seed', v); });
     w.querySelector('button').addEventListener('click', newSeed);
+  } else if (d.type === 'crop'){
+    w.innerHTML = `<div class="crop-row"><span class="ctl-lab">Crop</span><button class="btn" type="button" id="btnCrop" aria-pressed="false">Drag to crop</button><button class="btn" type="button" id="btnCropReset">Reset</button></div><p class="hint" id="cropHint">Choose which part of the image fills the frame. Use the sliders, or press “Drag to crop” to move the image on the sheet (scroll to zoom, arrow keys to nudge).</p>`;
+    w.querySelector('#btnCrop').addEventListener('click', () => setCropping(!cropping));
+    w.querySelector('#btnCropReset').addEventListener('click', () => { Object.assign(S, {cropZoom:1, cropX:.5, cropY:.5}); persist(); sync(); process(); });
   } else if (d.type === 'drop'){
     w.innerHTML = `<div class="drop"><button class="btn" type="button" id="btnUpload">Choose an image…</button><p>Or drop or paste one onto the page. Faces and subjects on light backgrounds with good contrast trace best.</p></div>`;
     w.querySelector('button').addEventListener('click', () => $('#file').click());
@@ -511,7 +524,10 @@ function sync(){
 const fmtMm = v => (Math.round(v*10)/10).toString();
 
 function set(k, v){
-  S[k] = v; persist(); sync();
+  S[k] = v;
+  if (k === 'source'){ S.cropZoom = 1; S.cropX = .5; S.cropY = .5; }
+  if ((k === 'fit' || k === 'source' || k === 'ratio' || k === 'padding') && cropping) setCropping(false);
+  persist(); sync();
   if (k === 'ratio' || k === 'outMm') updateStats();
   schedule(ACT[k]);
 }
@@ -596,7 +612,9 @@ function process(){
   const inner = {x:pad, y:pad, w:Math.max(4, W - 2*pad), h:Math.max(4, H - 2*pad)};
   const sa = src.width / src.height, ia = inner.w / inner.h;
   let fw, fh; if ((S.fit === 'cover') === (sa > ia)){ fh = inner.h; fw = fh * sa; } else { fw = inner.w; fh = fw / sa; }
-  const fit = {x: inner.x + (inner.w - fw)/2, y: inner.y + (inner.h - fh)/2, w: fw, h: fh};
+  let cx = .5, cy = .5;
+  if (S.fit === 'cover'){ const z = Math.max(1, S.cropZoom || 1); fw *= z; fh *= z; cx = clamp01(S.cropX); cy = clamp01(S.cropY); }
+  const fit = {x: inner.x + (inner.w - fw)*cx, y: inner.y + (inner.h - fh)*cy, w: fw, h: fh};
   const fc = mk(W, H), g = fc.getContext('2d', {willReadFrequently:true});
   g.fillStyle = '#fff'; g.fillRect(0, 0, W, H);
   g.save(); g.beginPath(); g.rect(inner.x, inner.y, inner.w, inner.h); g.clip(); g.drawImage(src, fit.x, fit.y, fit.w, fit.h); g.restore();
@@ -782,6 +800,14 @@ function fullRender(){
   needRender = false; if (!map) return;
   const w = cv.width, h = cv.height, k = w / map.W;
   paintBase(dctx, w, h, false);
+  if (cropping){
+    const r = map.inner, fi = map.fit;
+    dctx.save(); dctx.globalAlpha = .28; dctx.drawImage(map.src, fi.x*k, fi.y*k, fi.w*k, fi.h*k); dctx.restore();
+    drawSource(dctx, k, 1);
+    dctx.save(); dctx.strokeStyle = '#ff3e9a'; dctx.lineWidth = Math.max(2, w / 300); dctx.setLineDash([w/60, w/90]);
+    dctx.strokeRect(r.x*k, r.y*k, r.w*k, r.h*k); dctx.restore();
+    return;
+  }
   if (isTrace()){
     if (S.guide > 0){
       if (S.guideType === 'tone'){ dctx.save(); dctx.globalAlpha = S.guide; dctx.imageSmoothingEnabled = true; dctx.drawImage(map.tone, 0, 0, w, h); dctx.restore(); }
@@ -802,6 +828,7 @@ function fullRender(){
 // ---------- Loop & stats ----------
 function tick(){
   if (needRender) fullRender();
+  if (cropping){ requestAnimationFrame(tick); return; }
   if (isTrace() && map){
     if (brush.active) runBrush();
     drawAll(dctx, cv.width / map.W, false, traceCursors, tracePens);
@@ -1088,8 +1115,53 @@ function moveRing(e){
   ring.style.left = (e.clientX - r.left) + 'px'; ring.style.top = (e.clientY - r.top) + 'px';
   ring.hidden = false;
 }
+let cropping = false, cropDrag = null;
+function setCropping(on){
+  cropping = on && S.fit === 'cover';
+  document.body.classList.toggle('cropping', cropping);
+  const b = $('#btnCrop'); if (b){ b.setAttribute('aria-pressed', String(cropping)); b.textContent = cropping ? 'Done cropping' : 'Drag to crop'; }
+  needRender = true;
+  if (!cropping) process();
+}
+function cropPan(dx, dy){
+  const r = map.inner, fi = map.fit;
+  if (fi.w - r.w > .5) S.cropX = clamp01(S.cropX - dx / (fi.w - r.w));
+  if (fi.h - r.h > .5) S.cropY = clamp01(S.cropY - dy / (fi.h - r.h));
+  refit();
+}
+function refit(){
+  const r = map.inner, fi = map.fit, z = Math.max(1, S.cropZoom);
+  const sa = map.src.width / map.src.height, ia = r.w / r.h;
+  let fw, fh; if (sa > ia){ fh = r.h; fw = fh * sa; } else { fw = r.w; fh = fw / sa; }
+  fw *= z; fh *= z;
+  Object.assign(fi, {w:fw, h:fh, x:r.x + (r.w - fw)*S.cropX, y:r.y + (r.h - fh)*S.cropY});
+  needRender = true; sync();
+}
+cv.addEventListener('wheel', e => {
+  if (!cropping || !map) return;
+  e.preventDefault();
+  S.cropZoom = Math.min(4, Math.max(1, S.cropZoom * Math.exp(-e.deltaY * .0015))); refit(); persist();
+}, {passive:false});
+document.addEventListener('keydown', e => {
+  if (!cropping || !map || /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) return;
+  const st = e.shiftKey ? 10 : 2, mv = {ArrowLeft:[st,0], ArrowRight:[-st,0], ArrowUp:[0,st], ArrowDown:[0,-st]}[e.key];
+  if (mv){ e.preventDefault(); e.stopImmediatePropagation(); cropPan(mv[0], mv[1]); persist(); }
+  else if (e.key === 'Enter' || e.key === 'Escape'){ e.preventDefault(); e.stopImmediatePropagation(); setCropping(false); }
+}, true);
 cv.addEventListener('pointerdown', e => {
-  if (!isTrace() || !map || (e.pointerType === 'mouse' && e.button !== 0)) return;
+  if (!cropping || !map) return;
+  e.preventDefault(); e.stopImmediatePropagation(); try { cv.setPointerCapture(e.pointerId); } catch(err){}
+  const [x, y] = toMap(e); cropDrag = {x, y}; document.body.classList.add('dragging');
+});
+cv.addEventListener('pointermove', e => {
+  if (!cropDrag) return;
+  e.stopImmediatePropagation();
+  const [x, y] = toMap(e); cropPan(x - cropDrag.x, y - cropDrag.y); cropDrag = {x, y};
+});
+const endCropDrag = () => { if (!cropDrag) return; cropDrag = null; document.body.classList.remove('dragging'); persist(); };
+cv.addEventListener('pointerup', endCropDrag); cv.addEventListener('pointercancel', endCropDrag);
+cv.addEventListener('pointerdown', e => {
+  if (cropping || !isTrace() || !map || (e.pointerType === 'mouse' && e.button !== 0)) return;
   e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch(err){}
   pushHistory();
   const [x, y] = toMap(e);
@@ -1102,6 +1174,7 @@ cv.addEventListener('pointerdown', e => {
   traceDirty = true; moveRing(e);
 });
 cv.addEventListener('pointermove', e => {
+  if (cropping) return;
   moveRing(e);
   if (!gesture) return;
   let evs = e.getCoalescedEvents ? e.getCoalescedEvents() : []; if (!evs.length) evs = [e];
