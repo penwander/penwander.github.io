@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dust · Penwander</title>
+<meta name="description" content="Upload a picture and get it back drawn in dust. Free, and everything runs in your browser.">
+<meta name="theme-color" content="#f3f4ff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f0d24" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Dust · Penwander">
+<meta property="og:description" content="Upload a picture and get it back drawn in dust. Free, and everything runs in your browser.">
+<meta property="og:url" content="https://penwander.github.io/dust.html">
+<meta property="og:image" content="https://penwander.github.io/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://penwander.github.io/og-image.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Onest:wght@400;500;600;700&family=Martian+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: riso print shop. Bold blue print bed with halftone dots holds the sheet; color-coded ink trays (control sections) on the right; overprinted pink/blue/yellow as the signature. */
+:root{
+  --bg:#f3f4ff; --surface:#ffffff; --sunk:#eceeff; --fg:#17133d; --muted:#5f5b86; --rule:#dcdcf2;
+  --pink:#ff3e9a; --blue:#2d5bff; --yellow:#ffcf2e; --mint:#12c29a; --orange:#ff7a2f;
+  --bed:#2d5bff; --bed-dot:rgba(255,255,255,.16); --bed-ink:#ffffff;
+  --accent:var(--pink); --on-accent:#ffffff; --ink-shadow:var(--blue);
+  --shadow:rgba(23,19,61,.16); --blend:multiply;
+  --tile-bg:#fdfdfb; --tile-edge:#dcdcf2; --mk-y:#ffcf2e; --mk-b:#2d5bff; --mk-p:#ff3e9a; --mk-blend:multiply;
+  --display:"Syne", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body:"Onest", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --mono:"Martian Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f0d24; --surface:#1a1736; --sunk:#141230; --fg:#f2f0ff; --muted:#a29ec9; --rule:#2f2b58;
+    --pink:#ff5aab; --blue:#6f8cff; --yellow:#ffd84d; --mint:#35dcb3; --orange:#ff8d4d;
+    --bed:#1d1f66; --bed-dot:rgba(140,160,255,.16); --bed-ink:#dfe3ff;
+    --on-accent:#16082a; --shadow:rgba(0,0,0,.5); --blend:screen;
+    --tile-bg:#17133d; --tile-edge:#2f2b58; --mk-y:#ffcf2e; --mk-b:#6f8cff; --mk-p:#ff3e9a; --mk-blend:normal; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f0d24; --surface:#1a1736; --sunk:#141230; --fg:#f2f0ff; --muted:#a29ec9; --rule:#2f2b58;
+  --pink:#ff5aab; --blue:#6f8cff; --yellow:#ffd84d; --mint:#35dcb3; --orange:#ff8d4d;
+  --bed:#1d1f66; --bed-dot:rgba(140,160,255,.16); --bed-ink:#dfe3ff;
+  --on-accent:#16082a; --shadow:rgba(0,0,0,.5); --blend:screen;
+    --tile-bg:#17133d; --tile-edge:#2f2b58; --mk-y:#ffcf2e; --mk-b:#6f8cff; --mk-p:#ff3e9a; --mk-blend:normal; color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font:14px/1.45 var(--body)}
+*{box-sizing:border-box}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2.5px solid var(--pink);outline-offset:2px}
+
+.app{height:100%;display:grid;grid-template-rows:auto auto 1fr auto;padding-inline:16px;padding-block:14px 16px;gap:12px}
+
+/* Header */
+header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 28px}
+.brand{display:flex;align-items:center;gap:16px;flex-wrap:wrap;min-width:0}
+.logo{display:flex;align-items:center;gap:12px;margin:0}
+.logo-tile{width:48px;height:48px;border-radius:11px;background:var(--tile-bg);border:1px solid var(--tile-edge);overflow:hidden;flex:none;box-shadow:0 6px 14px -8px var(--shadow)}
+.logo-tile svg{display:block;width:100%;height:100%}
+.logo-tile path{fill:none;stroke-width:8.5;stroke-linecap:round;stroke-linejoin:round;mix-blend-mode:var(--mk-blend);stroke-dasharray:1;stroke-dashoffset:1;animation:ink 1.6s cubic-bezier(.55,.1,.25,1) .1s forwards}
+.logo-tile .mk-y{stroke:var(--mk-y);animation-delay:.35s}
+.logo-tile .mk-b{stroke:var(--mk-b);animation-delay:.2s}
+.logo-tile .mk-p{stroke:var(--mk-p)}
+@keyframes ink{to{stroke-dashoffset:0}}
+.wordmark{font:800 32px/1 var(--display);letter-spacing:-.035em}
+.tagline{margin:0;color:var(--muted);font-size:13px;max-width:30ch;line-height:1.35}
+
+.modes{display:flex;background:var(--surface);border:1.5px solid var(--fg);border-radius:999px;padding:3px;gap:2px;box-shadow:3px 3px 0 var(--fg)}
+.modes button{border:0;background:transparent;border-radius:999px;padding:8px 16px;font:700 13.5px var(--body);color:var(--fg);cursor:pointer;white-space:nowrap;transition:background .15s,color .15s}
+.modes button:hover{background:var(--sunk)}
+.modes button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.modes a{display:inline-block;border-radius:999px;padding:8px 16px;font:700 13.5px var(--body);color:var(--fg);white-space:nowrap;text-decoration:none;transition:background .15s,color .15s}
+.modes a:hover{background:var(--sunk)}
+
+.stats{display:flex;gap:8px;flex-wrap:wrap;margin:0}
+.stats div{display:grid;gap:3px;padding:7px 12px;border-radius:12px;background:var(--surface);border:1px solid var(--rule)}
+.stats div:nth-child(1){background:color-mix(in srgb,var(--pink) 14%,var(--surface));border-color:color-mix(in srgb,var(--pink) 35%,var(--rule))}
+.stats div:nth-child(2){background:color-mix(in srgb,var(--blue) 12%,var(--surface));border-color:color-mix(in srgb,var(--blue) 35%,var(--rule))}
+.stats div:nth-child(3){background:color-mix(in srgb,var(--yellow) 22%,var(--surface));border-color:color-mix(in srgb,var(--yellow) 55%,var(--rule))}
+.stats dt{font:500 9.5px/1.2 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.stats dd{margin:0;font:700 16px/1.1 var(--body);font-variant-numeric:tabular-nums}
+.state{display:inline-block;font:700 11px/1 var(--body);padding:4px 9px;border-radius:999px;background:var(--mint);color:#062b22}
+.state.done{background:var(--sunk);color:var(--muted)}
+.progress{height:5px;background:var(--rule);border-radius:3px;overflow:hidden}
+.progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--pink),var(--orange) 35%,var(--yellow) 60%,var(--mint) 80%,var(--blue));background-size:100vw 100%;transition:width .15s linear}
+
+/* Stage */
+main{display:grid;grid-template-columns:minmax(0,1fr) 372px;gap:16px;min-height:0}
+.stage{display:grid;grid-template-rows:auto minmax(0,1fr) auto;border-radius:22px;min-height:0;min-width:0;overflow:hidden;
+  background-color:var(--bed);
+  background-image:radial-gradient(var(--bed-dot) 1.3px,transparent 1.6px);
+  background-size:14px 14px}
+.toolbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 14px;padding:10px 12px;margin:10px 10px 0;background:var(--surface);border-radius:14px;box-shadow:0 2px 0 var(--shadow)}
+.toolbar .left,.toolbar .right{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.toolbar .ctl{margin:0;min-width:0;--sec:var(--pink)}
+.toolbar .ctl-range{width:170px}
+.sheet-area{position:relative;display:grid;place-items:center;min-height:0;overflow:hidden}
+.sheet{position:relative;box-shadow:0 2px 0 rgba(0,0,0,.08),0 24px 50px -12px rgba(8,10,60,.55)}
+.sheet canvas{display:block;width:100%;height:100%}
+.mark{position:absolute;width:14px;height:14px;border-color:var(--bed-ink);border-style:solid;border-width:0;opacity:.75}
+.mark.tl{left:-20px;top:-20px;border-right-width:1.5px;border-bottom-width:1.5px}
+.mark.tr{right:-20px;top:-20px;border-left-width:1.5px;border-bottom-width:1.5px}
+.mark.bl{left:-20px;bottom:-20px;border-right-width:1.5px;border-top-width:1.5px}
+.mark.br{right:-20px;bottom:-20px;border-left-width:1.5px;border-top-width:1.5px}
+.drop-hint{position:absolute;inset:12px;border:2.5px dashed var(--yellow);border-radius:16px;display:grid;place-items:center;background:color-mix(in srgb,var(--bed) 80%,transparent);font:800 22px var(--display);color:var(--yellow)}
+.caption{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 16px;padding:10px 18px 12px;font:11px/1.3 var(--mono);color:var(--bed-ink);font-variant-numeric:tabular-nums;opacity:.9}
+.ring{position:absolute;left:0;top:0;border:2px solid var(--pink);border-radius:50%;pointer-events:none;transform:translate(-50%,-50%);box-shadow:0 0 0 1.5px rgba(255,255,255,.8)}
+.ring.erase{border-style:dashed;border-color:var(--blue)}
+.trace-mode #cv{touch-action:none;cursor:crosshair}
+.trace-mode.tool-brush #cv,.trace-mode.tool-erase #cv{cursor:none}
+
+/* Panel */
+.panel{overflow-y:auto;min-height:0;display:flex;flex-direction:column;gap:14px;padding:2px 4px 24px 2px}
+.eyebrow{font:500 10px/1 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin:0 0 9px}
+.presets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.preset{--c:var(--pink);text-align:left;border:1.5px solid var(--rule);background:var(--surface);border-radius:14px;padding:8px;cursor:pointer;display:grid;grid-template-columns:48px minmax(0,1fr);align-items:center;gap:10px;transition:transform .15s,box-shadow .15s,border-color .15s}
+.preset:hover{transform:translate(-2px,-2px);border-color:var(--fg);box-shadow:3px 3px 0 var(--c)}
+.preset .glyph{width:48px;height:40px;border-radius:9px;background:color-mix(in srgb,var(--c) 18%,var(--surface));display:grid;place-items:center}
+.preset .glyph svg{width:38px;height:28px;overflow:visible}
+.preset b{display:block;font:700 13px/1.2 var(--body)}
+.preset small{display:block;color:var(--muted);font-size:11.5px;line-height:1.3;margin-top:2px}
+
+.grp{--sec:var(--pink);background:var(--surface);border:1.5px solid var(--rule);border-radius:16px}
+.grp[open]{border-color:color-mix(in srgb,var(--sec) 40%,var(--rule))}
+.grp summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 14px;font:700 16px var(--display);letter-spacing:-.01em}
+.grp summary::-webkit-details-marker{display:none}
+.grp summary::before{content:"";width:14px;height:14px;border-radius:50%;background:var(--sec);flex:none;box-shadow:3px 0 0 color-mix(in srgb,var(--sec) 45%,transparent)}
+.grp summary::after{content:"+";margin-left:auto;font:500 18px/1 var(--body);color:var(--muted);transition:transform .2s}
+.grp[open] summary::after{transform:rotate(45deg)}
+.grp-body{display:flex;flex-direction:column;gap:15px;padding:2px 14px 16px}
+.ctl{display:grid;gap:6px;min-width:0}
+.ctl-row{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.ctl-row label,.ctl-lab{font:600 12.5px var(--body);color:var(--fg);cursor:default}
+.ctl-row output{font:11px var(--mono);color:var(--fg);background:color-mix(in srgb,var(--sec,var(--pink)) 16%,var(--surface));padding:2px 7px;border-radius:999px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.hint{font-size:11.5px;color:var(--muted);line-height:1.4;margin:0}
+input[type=range]{width:100%;accent-color:var(--sec,var(--pink));margin:0;height:20px;cursor:pointer}
+.seg{display:flex;flex-wrap:wrap;background:var(--sunk);border-radius:999px;padding:3px;gap:2px}
+.seg button{flex:1 1 0;min-width:max-content;display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1.5px solid transparent;background:transparent;border-radius:999px;padding:5px 10px;font-size:12.5px;font-weight:600;cursor:pointer;color:var(--muted);white-space:nowrap;transition:background .15s,color .15s}
+.seg button:hover{color:var(--fg)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg);border-color:var(--sec,var(--pink));box-shadow:0 1px 0 var(--shadow)}
+.seg button:disabled{opacity:.4;cursor:not-allowed}
+.ctl-seg{gap:7px}
+.seg-grid{display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));border-radius:14px}
+.seg-grid button{border-radius:10px;min-width:0;padding:6px 6px}
+.tex-ico{width:16px;height:16px;flex:none}
+.dots{display:inline-flex;flex:none}
+.dots i{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--surface);margin-left:-3px;background:var(--c)}
+.dots i:first-child{margin-left:0}
+.style-ico{width:22px;height:12px;flex:none;overflow:visible}
+.rand-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
+.rand-row .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:8px 10px}
+.rand-row svg{width:16px;height:16px;flex:none}
+.preset[aria-pressed="true"]{border-color:var(--fg);box-shadow:3px 3px 0 var(--c)}
+.preset[aria-pressed="true"] b::after{content:" ✓";color:var(--c)}
+.switch{display:flex;align-items:center;gap:10px;font-size:12.5px;font-weight:600;cursor:pointer}
+.switch input{appearance:none;width:34px;height:20px;border-radius:10px;background:var(--rule);position:relative;cursor:pointer;flex:none;margin:0;transition:background .15s}
+.switch input::after{content:"";position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:var(--surface);transition:transform .15s}
+.switch input:checked{background:var(--sec,var(--pink))}
+.switch input:checked::after{transform:translateX(14px)}
+select,input[type=text],input[type=number]{width:100%;background:var(--sunk);border:1.5px solid transparent;border-radius:10px;padding:7px 10px;font-size:13px}
+select:hover,input[type=text]:hover,input[type=number]:hover{border-color:var(--rule)}
+input[type=number]{font-family:var(--mono);font-size:12px;font-variant-numeric:tabular-nums}
+.color-row{display:flex;align-items:center;gap:8px}
+.color-row input[type=color]{width:34px;height:26px;border:1.5px solid var(--rule);border-radius:8px;padding:0;background:none;cursor:pointer}
+.color-row output{font:11px var(--mono);color:var(--muted)}
+.crop-row{display:flex;align-items:center;gap:8px}
+.crop-row .ctl-lab{margin-right:auto}
+#btnCrop[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+body.cropping .sheet canvas{cursor:grab;touch-action:none}
+body.cropping.dragging .sheet canvas{cursor:grabbing}
+.seed-row{display:flex;gap:6px}
+.seed-row input{flex:1;min-width:0}
+.btn{border:1.5px solid var(--fg);background:var(--surface);border-radius:999px;padding:6px 14px;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;transition:transform .12s,box-shadow .12s}
+.btn:hover{transform:translate(-1px,-1px);box-shadow:2px 2px 0 var(--fg)}
+.btn:active{transform:none;box-shadow:none}
+.btn.primary{background:var(--pink);border-color:var(--pink);color:var(--on-accent);box-shadow:3px 3px 0 var(--blue)}
+.btn.primary:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--blue)}
+.btn.primary:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--blue)}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.btn-grid .btn{padding:9px 6px}
+.drop{border:2px dashed color-mix(in srgb,var(--sec) 50%,var(--rule));border-radius:14px;padding:14px;display:grid;gap:8px;justify-items:start;background:color-mix(in srgb,var(--sec) 6%,var(--surface))}
+.drop p{margin:0;font-size:12px;color:var(--muted)}
+.foot{font-size:11.5px;color:var(--muted);line-height:1.6;margin:0}
+.foot a{color:var(--pink);font-weight:600}
+kbd{font:10px var(--mono);border:1px solid var(--rule);border-bottom-width:2px;border-radius:4px;padding:0 4px;background:var(--surface);color:var(--fg)}
+.site-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 20px;font-size:12px;color:var(--muted);border-top:1.5px solid var(--rule);padding-top:10px}
+.site-foot nav{display:flex;gap:18px;flex-wrap:wrap}
+.site-foot a{color:var(--muted);font-weight:600;text-decoration:none}
+.site-foot a:hover{color:var(--pink);text-decoration:underline}
+.site-foot p{margin:0}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:13px;font-weight:600;box-shadow:4px 4px 0 var(--pink);max-width:calc(100% - 32px);z-index:5}
+
+@media (max-width:900px){
+  .app{height:auto;min-height:100%}
+  main{grid-template-columns:1fr}
+  .stage{height:70svh;min-height:460px}
+  .panel{overflow:visible;padding-right:0}
+  .wordmark{font-size:28px}
+}
+@media (prefers-reduced-motion: reduce){ *{transition:none!important;animation:none!important} .logo-tile path{stroke-dashoffset:0} }
+</style>
+<style>
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+<style>
+.modes a{display:inline-block;border:0;background:transparent;border-radius:999px;padding:8px 16px;font:700 13.5px var(--body);color:var(--fg);cursor:pointer;white-space:nowrap;text-decoration:none;transition:background .15s,color .15s}
+.modes a:hover{background:var(--sunk)}
+.modes a[aria-current="page"]{background:var(--fg);color:var(--bg)}
+.empty{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:var(--surface);color:var(--fg);border-radius:999px;padding:6px 6px 6px 16px;font-size:12.5px;font-weight:600;box-shadow:0 2px 0 var(--shadow);white-space:nowrap;max-width:calc(100% - 24px)}
+.empty span{overflow:hidden;text-overflow:ellipsis}
+.dir-ico{width:16px;height:16px;flex:none}
+.look-ico{width:14px;height:14px;border-radius:4px;flex:none;border:1px solid var(--rule)}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <a href="./" style="color:inherit;text-decoration:none"><h1 class="logo"><span class="logo-tile" aria-hidden="true"><svg viewBox="0 0 128 128">
+          <g transform="translate(-2.5 3.2)"><path class="mk-y" pathLength="1" d="M15.8 105.3 C3.5 95.9 2.7 93.1 0.7 77.1 C0.2 73.2 0 69.5 0 66 C0 31.3 22.8 13.9 56.8 4 C63.8 1.9 71.4 0 78.7 0 C83.9 0 89 1 93.8 3.5 C109.1 11.7 109.6 27.4 109.8 42.8 C109.8 46.8 110 50.9 110 55 C110 62.8 109.3 70.6 105.6 77.4 C98.1 90.9 79.9 98.4 62.1 98.4 C47 98.4 32.3 92.9 24.9 81.1 C23 78.1 22.2 75 22.2 71.9 C22.2 55.2 47.6 39.6 66 39.6 C70.3 39.6 74.1 40.4 77.3 42.2 C84 46.2 87 52.1 87 58.3 C87 71.9 72.8 87 53.5 87 C51.9 87 50.4 86.9 48.8 86.7 C47.5 83.2 46.1 79.1 44.9 75.6 C45.3 74.2 45.6 72.9 46 71.6 C52.9 69.8 58.5 68.8 65.8 68.5 C68.5 78.7 69.2 89.6 69.2 100.7 C69.2 114.9 68 129.2 68 142.5 C68 182.8 67.2 222.7 66.1 263" transform="translate(24.5 14) scale(0.72)"/></g>
+          <g transform="translate(3.2 2.4)"><path class="mk-b" pathLength="1" d="M15.8 105.3 C3.5 95.9 2.7 93.1 0.7 77.1 C0.2 73.2 0 69.5 0 66 C0 31.3 22.8 13.9 56.8 4 C63.8 1.9 71.4 0 78.7 0 C83.9 0 89 1 93.8 3.5 C109.1 11.7 109.6 27.4 109.8 42.8 C109.8 46.8 110 50.9 110 55 C110 62.8 109.3 70.6 105.6 77.4 C98.1 90.9 79.9 98.4 62.1 98.4 C47 98.4 32.3 92.9 24.9 81.1 C23 78.1 22.2 75 22.2 71.9 C22.2 55.2 47.6 39.6 66 39.6 C70.3 39.6 74.1 40.4 77.3 42.2 C84 46.2 87 52.1 87 58.3 C87 71.9 72.8 87 53.5 87 C51.9 87 50.4 86.9 48.8 86.7 C47.5 83.2 46.1 79.1 44.9 75.6 C45.3 74.2 45.6 72.9 46 71.6 C52.9 69.8 58.5 68.8 65.8 68.5 C68.5 78.7 69.2 89.6 69.2 100.7 C69.2 114.9 68 129.2 68 142.5 C68 182.8 67.2 222.7 66.1 263" transform="translate(24.5 14) scale(0.72)"/></g>
+          <path class="mk-p" pathLength="1" d="M15.8 105.3 C3.5 95.9 2.7 93.1 0.7 77.1 C0.2 73.2 0 69.5 0 66 C0 31.3 22.8 13.9 56.8 4 C63.8 1.9 71.4 0 78.7 0 C83.9 0 89 1 93.8 3.5 C109.1 11.7 109.6 27.4 109.8 42.8 C109.8 46.8 110 50.9 110 55 C110 62.8 109.3 70.6 105.6 77.4 C98.1 90.9 79.9 98.4 62.1 98.4 C47 98.4 32.3 92.9 24.9 81.1 C23 78.1 22.2 75 22.2 71.9 C22.2 55.2 47.6 39.6 66 39.6 C70.3 39.6 74.1 40.4 77.3 42.2 C84 46.2 87 52.1 87 58.3 C87 71.9 72.8 87 53.5 87 C51.9 87 50.4 86.9 48.8 86.7 C47.5 83.2 46.1 79.1 44.9 75.6 C45.3 74.2 45.6 72.9 46 71.6 C52.9 69.8 58.5 68.8 65.8 68.5 C68.5 78.7 69.2 89.6 69.2 100.7 C69.2 114.9 68 129.2 68 142.5 C68 182.8 67.2 222.7 66.1 263" transform="translate(24.5 14) scale(0.72)"/>
+        </svg></span><span class="wordmark">Penwander</span></h1></a>
+      <p class="tagline">Upload a picture and get it back drawn in dust. Nothing leaves your browser.</p>
+    </div>
+    <nav class="modes" aria-label="Page">
+      <a href="./#generate">Generate</a>
+      <a href="./#trace">Trace &amp; draw</a>
+      <a href="dust.html" aria-current="page">Dust</a>
+    </nav>
+    <dl class="stats" aria-live="off">
+      <div><dt>Grains</dt><dd id="stGrains">0</dd></div>
+      <div><dt>Picture</dt><dd id="stName">Sample</dd></div>
+      <div><dt>PNG size</dt><dd id="stSize">0 px</dd></div>
+      <div><dt>Status</dt><dd><span class="state" id="stState">Settling</span></dd></div>
+    </dl>
+  </header>
+  <div class="progress" aria-hidden="true"><i id="prog"></i></div>
+
+  <main>
+    <section class="stage" aria-label="Dust picture">
+      <div class="toolbar">
+        <div class="left">
+          <button class="btn" id="btnPick" type="button" data-pick>Upload a picture</button>
+        </div>
+        <div class="right">
+          <button class="btn" id="btnSettle" type="button" title="Let the dust settle again (R)">Settle again</button>
+          <button class="btn primary" id="btnSeed" type="button" title="Same picture, new scatter of grains (N)">New variation</button>
+        </div>
+      </div>
+      <div class="sheet-area" id="area">
+        <div class="sheet" id="sheet">
+          <canvas id="cv" role="img" aria-label="Your picture drawn in dust"></canvas>
+          <span class="mark tl"></span><span class="mark tr"></span><span class="mark bl"></span><span class="mark br"></span>
+        </div>
+        <div class="empty" id="empty"><span>Upload a picture to draw it in dust</span><button class="btn primary" type="button" data-pick>Choose a picture</button></div>
+        <div class="drop-hint" id="dropHint" hidden>Drop the picture to draw it in dust</div>
+      </div>
+      <div class="caption"><span id="capImg">Sample picture</span><span id="capLook"></span></div>
+    </section>
+
+    <aside class="panel">
+      <details class="grp" open style="--sec:var(--pink)">
+        <summary>Picture</summary>
+        <div class="grp-body">
+          <div class="drop">
+            <button class="btn primary" type="button" data-pick>Choose a picture</button>
+            <p>Or drop or paste one anywhere on the page. JPG, PNG, WebP or GIF. It’s redrawn in dust as soon as it loads.</p>
+          </div>
+        </div>
+      </details>
+
+      <details class="grp" open style="--sec:var(--blue)">
+        <summary>Dust</summary>
+        <div class="grp-body">
+          <div class="ctl ctl-seg"><span class="ctl-lab">Look</span>
+            <div class="seg" role="group" aria-label="Look" data-k="look">
+              <button type="button" data-v="dark"><span class="look-ico" style="background:#0e0d12" aria-hidden="true"></span>Dust on black</button>
+              <button type="button" data-v="paper"><span class="look-ico" style="background:#f2ede2" aria-hidden="true"></span>Soot on paper</button>
+              <button type="button" data-v="colour"><span class="dots" aria-hidden="true"><i style="--c:#00a0dc"></i><i style="--c:#e6007e"></i><i style="--c:#ffd200"></i></span>Colour dust</button>
+            </div>
+          </div>
+          <div class="ctl"><div class="ctl-row"><label for="amount">Amount of dust</label><output id="o-amount"></output></div><input type="range" id="amount" data-k="amount" min="40" max="1200" step="10"></div>
+          <div class="ctl"><div class="ctl-row"><label for="size">Grain size</label><output id="o-size"></output></div><input type="range" id="size" data-k="size" min="0.4" max="3" step="0.05"></div>
+          <div class="ctl"><div class="ctl-row"><label for="clumps">Clumps</label><output id="o-clumps"></output></div><input type="range" id="clumps" data-k="clumps" min="0" max="1" step="0.05"><p class="hint">Bigger specks mixed in with the fine dust.</p></div>
+          <div class="ctl"><div class="ctl-row"><label for="scatter">Scatter</label><output id="o-scatter"></output></div><input type="range" id="scatter" data-k="scatter" min="0" max="12" step="0.25"></div>
+          <div class="ctl"><div class="ctl-row"><label for="haze">Haze</label><output id="o-haze"></output></div><input type="range" id="haze" data-k="haze" min="0" max="1" step="0.05"><p class="hint">A soft cloud of fine powder behind the grains.</p></div>
+          <div class="ctl"><div class="ctl-row"><label for="contrast">Contrast</label><output id="o-contrast"></output></div><input type="range" id="contrast" data-k="contrast" min="0.5" max="2.5" step="0.05"></div>
+          <label class="switch"><input type="checkbox" id="invert" data-k="invert">Invert (dust where the picture is dark)</label>
+        </div>
+      </details>
+
+      <details class="grp" open style="--sec:var(--yellow)">
+        <summary>Wind</summary>
+        <div class="grp-body">
+          <div class="ctl ctl-seg"><span class="ctl-lab">Blowing</span>
+            <div class="seg seg-grid" role="group" aria-label="Wind direction" style="--cols:5" data-k="wind">
+              <button type="button" data-v="none" title="No wind">None</button>
+              <button type="button" data-v="right" aria-label="Right"><svg class="dir-ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 8h11M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              <button type="button" data-v="left" aria-label="Left"><svg class="dir-ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M14 8H3M7 4L3 8l4 4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              <button type="button" data-v="up" aria-label="Up"><svg class="dir-ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 14V3M4 7l4-4 4 4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              <button type="button" data-v="down" aria-label="Down"><svg class="dir-ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v11M4 9l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            </div>
+          </div>
+          <div class="ctl"><div class="ctl-row"><label for="windAmt">Strength</label><output id="o-windAmt"></output></div><input type="range" id="windAmt" data-k="windAmt" min="0" max="1" step="0.05"><p class="hint">Trails of grains drifting off the picture.</p></div>
+        </div>
+      </details>
+
+      <details class="grp" open style="--sec:var(--mint)">
+        <summary>Save</summary>
+        <div class="grp-body">
+          <div class="ctl ctl-seg"><span class="ctl-lab">Size (long side)</span>
+            <div class="seg" role="group" aria-label="PNG size" data-k="png">
+              <button type="button" data-v="1600">1600 px</button>
+              <button type="button" data-v="2400">2400 px</button>
+              <button type="button" data-v="3200">3200 px</button>
+            </div>
+          </div>
+          <button class="btn primary" type="button" id="btnSave">Save PNG</button>
+          <p class="hint">The saved image is redrawn at full size with the same grains as the preview.</p>
+        </div>
+      </details>
+      <p class="foot">Shortcuts: <kbd>N</kbd> new variation, <kbd>R</kbd> settle again, <kbd>S</kbd> save PNG. Double-click a slider label to reset it. Paste or drop an image anywhere on the page.</p>
+    </aside>
+  </main>
+  <footer class="site-foot">
+    <nav aria-label="Legal"><a href="terms.html">Terms &amp; Conditions</a><a href="privacy.html">Privacy Policy</a></nav>
+    <p>Copyright &copy; 2026 Penwander</p>
+  </footer>
+</div>
+<input type="file" id="file" accept="image/*" hidden>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+(() => {
+"use strict";
+const $ = s => document.querySelector(s);
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+function mulberry32(a){ return function(){ a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+const DEF = {look:'dark', amount:320, size:1, clumps:.3, scatter:1.5, haze:.35, contrast:1.3, invert:false, wind:'none', windAmt:.5, png:'2400', seed:7};
+let S = Object.assign({}, DEF);
+try { const s = JSON.parse(localStorage.getItem('penwander-dust-v2') || 'null'); if (s) Object.assign(S, s); } catch(e){}
+const persist = () => { try { localStorage.setItem('penwander-dust-v2', JSON.stringify(S)); } catch(e){} };
+const FMT = {amount: v => Math.round(v) + 'k', size: v => (+v).toFixed(2) + '×', clumps: v => Math.round(v*100) + '%', scatter: v => (+v).toFixed(1) + ' px', haze: v => Math.round(v*100) + '%', contrast: v => (+v).toFixed(2) + '×', windAmt: v => Math.round(v*100) + '%'};
+const LOOKS = {
+  dark:{bg:[14,13,18], fg:[236,229,214], label:'Pale dust on black'},
+  paper:{bg:[242,237,226], fg:[34,30,30], label:'Soot on paper'},
+  colour:{bg:[12,11,16], fg:null, label:'Coloured dust on black'}
+};
+const WIND = {none:[0,0], right:[1,0], left:[-1,0], up:[0,-1], down:[0,1]};
+const REF = 1200; // grain counts and sizes are defined for a 1200 px long side
+
+let img = null, imgName = 'Sample', uploaded = false;
+const cv = $('#cv'), ctx = cv.getContext('2d');
+
+function sample(){
+  const c = document.createElement('canvas'); c.width = 960; c.height = 720;
+  const g = c.getContext('2d');
+  const gr = g.createRadialGradient(400, 300, 20, 480, 360, 560);
+  gr.addColorStop(0, '#ffffff'); gr.addColorStop(1, '#000000');
+  g.fillStyle = '#000'; g.fillRect(0, 0, 960, 720);
+  g.globalCompositeOperation = 'lighter';
+  [['#00a0dc', 380, 310], ['#e6007e', 580, 310], ['#ffd200', 480, 460]].forEach(([col, x, y]) => {
+    const rg = g.createRadialGradient(x, y, 30, x, y, 200); rg.addColorStop(0, col); rg.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = rg; g.beginPath(); g.arc(x, y, 200, 0, Math.PI*2); g.fill();
+  });
+  g.globalCompositeOperation = 'source-over';
+  g.fillStyle = '#ffffff'; g.font = '800 112px Syne, "Avenir Next", system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText('Penwander', 480, 640);
+  return c;
+}
+
+// Output dimensions for a given long side: the picture plus a margin for drifting grains
+function dims(L){
+  const A = img.width / img.height, p = Math.round(.05 * L);
+  if (A >= 1){ const iw = L - 2*p, ih = Math.max(1, Math.round(iw / A)); return {W:L, H:ih + 2*p, p, iw, ih}; }
+  const ih = L - 2*p, iw = Math.max(1, Math.round(ih * A)); return {W:iw + 2*p, H:L, p, iw, ih};
+}
+
+// ---------- the dust renderer ----------
+function makeJob(L){
+  const D = dims(L), {W, H, p, iw, ih} = D, k = Math.max(W, H) / REF, colour = S.look === 'colour';
+  const s = Math.min(1, 900 / Math.max(iw, ih)), TW = Math.max(1, Math.round(iw * s)), TH = Math.max(1, Math.round(ih * s));
+  const tc = document.createElement('canvas'); tc.width = TW; tc.height = TH;
+  const tg = tc.getContext('2d', {willReadFrequently:true}); tg.imageSmoothingQuality = 'high';
+  tg.drawImage(img, 0, 0, TW, TH);
+  const px = tg.getImageData(0, 0, TW, TH).data;
+  const tone = new Float32Array(TW * TH);
+  const wantLight = (S.look !== 'paper') !== !!S.invert;
+  let sum = 0;
+  for (let i = 0; i < TW*TH; i++){
+    const r = px[i*4], g = px[i*4+1], b = px[i*4+2], a = px[i*4+3] / 255;
+    let l = (.2126*r + .7152*g + .0722*b) / 255;
+    if (colour && !S.invert) l = Math.max(l, Math.max(r, g, b) / 255 * .8);
+    let t = wantLight ? l : 1 - l;
+    t = clamp((t - .5) * S.contrast + .5, 0, 1);
+    t = Math.pow(t, 1.25) * a;
+    // feather the edges so the picture fades into the surface
+    const ex = (i % TW) / TW, ey = Math.floor(i / TW) / TH, e = clamp(Math.min(ex, 1 - ex, ey, 1 - ey) / .045, 0, 1);
+    t *= e * e * (3 - 2 * e);
+    tone[i] = t; sum += t;
+  }
+  const mean = Math.max(.02, sum / (TW*TH));
+  // haze: a heavily blurred copy of the tone map
+  const hz = document.createElement('canvas'); hz.width = W; hz.height = H;
+  const hg = hz.getContext('2d', {willReadFrequently:true});
+  const small = document.createElement('canvas'); small.width = TW; small.height = TH;
+  const sg = small.getContext('2d'); const sd = sg.createImageData(TW, TH);
+  for (let i = 0; i < TW*TH; i++){ const v = tone[i] * 255; sd.data[i*4] = v; sd.data[i*4+1] = v; sd.data[i*4+2] = v; sd.data[i*4+3] = 255; }
+  sg.putImageData(sd, 0, 0);
+  hg.fillStyle = '#000'; hg.fillRect(0, 0, W, H);
+  hg.filter = `blur(${Math.round(14 * k)}px)`;
+  hg.drawImage(small, p, p, iw, ih);
+  hg.filter = 'none';
+  const haze = hg.getImageData(0, 0, W, H).data;
+  return {W, H, p, iw, ih, k, TW, TH, tone, px, mean, haze, colour,
+    acc: colour ? [new Float32Array(W*H), new Float32Array(W*H), new Float32Array(W*H)] : [new Float32Array(W*H)],
+    rng: mulberry32(S.seed * 7919 + 13), total: Math.round(S.amount * 1000 * k * k), done: 0};
+}
+
+function grains(J, n){
+  const {W, H, p, iw, ih, k, TW, TH, tone, px, rng, acc, colour} = J;
+  const sc = S.scatter * k, base = S.size * k * .55, clumpP = S.clumps * .06;
+  const [wx, wy] = WIND[S.wind] || WIND.none, wAmt = S.wind === 'none' ? 0 : S.windAmt * k * 320;
+  const A0 = acc[0], A1 = acc[1], A2 = acc[2];
+  const end = Math.min(J.total, J.done + n);
+  let tries = 0;
+  while (J.done < end){
+    if (++tries > n * 60) { J.total = J.done; break; }
+    const tx = rng() * TW, ty = rng() * TH, ti = (ty|0) * TW + (tx|0);
+    if (rng() > tone[ti]) continue;
+    let x = p + tx / TW * iw, y = p + ty / TH * ih;
+    x += (rng() + rng() + rng() - 1.5) * sc * 1.4;
+    y += (rng() + rng() + rng() - 1.5) * sc * 1.4;
+    if (wAmt){ const d = wAmt * Math.pow(rng(), 5); x += wx * d + (rng() - .5) * d * .1 * Math.abs(wy); y += wy * d + (rng() - .5) * d * .1 * Math.abs(wx); }
+    let r = base * (.45 + Math.pow(rng(), 3) * 1.8), w = .35 + rng() * .65;
+    if (rng() < clumpP){ r *= 2.2 + rng() * 2.5; w *= .55; }
+    let cr = 1, cg = 1, cb = 1;
+    if (colour){ const q = ti * 4; cr = px[q] / 255 + .04; cg = px[q+1] / 255 + .04; cb = px[q+2] / 255 + .04; }
+    J.done++;
+    if (r < .75){
+      // tiny grain: share it between the 4 nearest pixels
+      const m = w * Math.max(.25, r * r * 3.14) , fx = x - .5, fy = y - .5, x0 = Math.floor(fx), y0 = Math.floor(fy), ax = fx - x0, ay = fy - y0;
+      if (x0 < 0 || y0 < 0 || x0 + 1 >= W || y0 + 1 >= H) continue;
+      const i = y0 * W + x0, w00 = m*(1-ax)*(1-ay), w10 = m*ax*(1-ay), w01 = m*(1-ax)*ay, w11 = m*ax*ay;
+      A0[i] += w00*cr; A0[i+1] += w10*cr; A0[i+W] += w01*cr; A0[i+W+1] += w11*cr;
+      if (colour){ A1[i] += w00*cg; A1[i+1] += w10*cg; A1[i+W] += w01*cg; A1[i+W+1] += w11*cg; A2[i] += w00*cb; A2[i+1] += w10*cb; A2[i+W] += w01*cb; A2[i+W+1] += w11*cb; }
+    } else {
+      const xa = Math.max(0, Math.floor(x - r)), xb = Math.min(W - 1, Math.ceil(x + r)), ya = Math.max(0, Math.floor(y - r)), yb = Math.min(H - 1, Math.ceil(y + r));
+      const r2 = r * r, sq = 1 + rng() * .6, rot = rng() * Math.PI, cs = Math.cos(rot), sn = Math.sin(rot);
+      for (let yy = ya; yy <= yb; yy++) for (let xx = xa; xx <= xb; xx++){
+        const dx = xx + .5 - x, dy = yy + .5 - y, u = dx*cs + dy*sn, v = (dy*cs - dx*sn) * sq, d2 = u*u + v*v;
+        if (d2 > r2) continue;
+        const ww = w * (1 - d2 / r2 * .6), i = yy * W + xx;
+        A0[i] += ww*cr; if (colour){ A1[i] += ww*cg; A2[i] += ww*cb; }
+      }
+    }
+  }
+}
+
+function composite(J, out){
+  const {W, H, acc, haze, colour} = J, d = out.data, L = LOOKS[S.look], bg = L.bg;
+  const gain = 2.2, hz = S.haze * .55;
+  const A0 = acc[0], A1 = acc[1], A2 = acc[2];
+  for (let i = 0, q = 0; i < W*H; i++, q += 4){
+    const h = haze[q] / 255 * hz;
+    const n = ((Math.imul(i, 2654435761) >>> 24) / 255 - .5) * 7; // surface grain
+    if (colour){
+      const lum = h * .5;
+      d[q]   = bg[0] + (255 - bg[0]) * (1 - Math.exp(-(A0[i]*gain + lum))) + n;
+      d[q+1] = bg[1] + (255 - bg[1]) * (1 - Math.exp(-(A1[i]*gain + lum))) + n;
+      d[q+2] = bg[2] + (255 - bg[2]) * (1 - Math.exp(-(A2[i]*gain + lum))) + n;
+    } else {
+      const fg = L.fg, v = 1 - Math.exp(-(A0[i]*gain + h));
+      d[q] = bg[0] + (fg[0] - bg[0]) * v + n; d[q+1] = bg[1] + (fg[1] - bg[1]) * v + n; d[q+2] = bg[2] + (fg[2] - bg[2]) * v + n;
+    }
+    d[q+3] = 255;
+  }
+}
+
+// ---------- preview ----------
+let job = null, frame = null, raf = 0, previewL = 0;
+function layout(){
+  if (!img) return;
+  const r = $('#area').getBoundingClientRect(), m = 40;
+  const R = dims(1000), ratio = R.W / R.H;
+  let cw = Math.max(50, r.width - m), ch = cw / ratio;
+  if (ch > r.height - m){ ch = Math.max(50, r.height - m); cw = ch * ratio; }
+  const sh = $('#sheet'); sh.style.width = cw + 'px'; sh.style.height = ch + 'px';
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  previewL = Math.round(Math.max(cw, ch) * dpr);
+}
+function start(animate = true){
+  if (!img) return;
+  layout();
+  job = makeJob(previewL);
+  cv.width = job.W; cv.height = job.H;
+  frame = ctx.createImageData(job.W, job.H);
+  $('#stSize').textContent = (() => { const d = dims(+S.png); return `${d.W} × ${d.H}`; })();
+  $('#capLook').textContent = `${LOOKS[S.look].label}${S.wind !== 'none' ? ' · wind ' + S.wind : ''} · seed ${S.seed}`;
+  if (!animate){ grains(job, job.total); finishFrame(); return; }
+  cancelAnimationFrame(raf); raf = requestAnimationFrame(tick);
+}
+function finishFrame(){
+  composite(job, frame); ctx.putImageData(frame, 0, 0);
+  const f = job.total ? job.done / job.total : 1, doneNow = job.done >= job.total;
+  $('#prog').style.width = (f * 100).toFixed(1) + '%';
+  $('#stGrains').textContent = Math.round(job.done / (job.k * job.k)).toLocaleString('en-US');
+  const st = $('#stState'); st.textContent = doneNow ? 'Done' : 'Settling'; st.classList.toggle('done', doneNow);
+}
+function tick(){
+  raf = 0;
+  if (!job) return;
+  const t0 = performance.now();
+  // settle in about a second and a half, whatever the grain count
+  const per = Math.max(20000, Math.ceil(job.total / 45));
+  while (job.done < job.total && performance.now() - t0 < 14) grains(job, Math.min(per, 40000));
+  finishFrame();
+  if (job.done < job.total) raf = requestAnimationFrame(tick);
+}
+let rebuild = 0;
+function restart(){ clearTimeout(rebuild); rebuild = setTimeout(() => start(true), 60); }
+
+// ---------- controls ----------
+function syncUI(){
+  document.querySelectorAll('.seg[data-k]').forEach(g => g.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === String(S[g.dataset.k])))));
+  document.querySelectorAll('input[type=range][data-k]').forEach(i => { i.value = S[i.dataset.k]; $('#o-' + i.dataset.k).textContent = FMT[i.dataset.k](S[i.dataset.k]); });
+  $('#invert').checked = !!S.invert;
+  $('#windAmt').disabled = S.wind === 'none';
+  $('#empty').hidden = uploaded;
+}
+function setK(k, v){
+  S[k] = v; persist(); syncUI();
+  if (k === 'png'){ const d = dims(+v); $('#stSize').textContent = `${d.W} × ${d.H}`; return; }
+  restart();
+}
+document.querySelectorAll('.seg[data-k]').forEach(g => g.addEventListener('click', e => { const b = e.target.closest('button'); if (b) setK(g.dataset.k, b.dataset.v); }));
+document.querySelectorAll('input[type=range][data-k]').forEach(i => {
+  i.addEventListener('input', () => setK(i.dataset.k, +i.value));
+  const lab = document.querySelector(`label[for="${i.id}"]`);
+  if (lab) lab.addEventListener('dblclick', () => setK(i.dataset.k, DEF[i.dataset.k]));
+});
+$('#invert').addEventListener('change', e => setK('invert', e.target.checked));
+const newSeed = () => setK('seed', 1 + Math.floor(Math.random() * 99999));
+$('#btnSeed').addEventListener('click', newSeed);
+$('#btnSettle').addEventListener('click', () => start(true));
+
+// ---------- saving ----------
+let saving = false;
+async function save(){
+  if (saving || !img) return;
+  saving = true; const btn = $('#btnSave'); btn.disabled = true; btn.textContent = 'Drawing grains…';
+  try {
+    await new Promise(r => setTimeout(r, 30));
+    const J = makeJob(+S.png);
+    while (J.done < J.total){
+      grains(J, 200000);
+      btn.textContent = `Drawing grains… ${Math.round(J.done / J.total * 100)}%`;
+      await new Promise(r => setTimeout(r, 0));
+    }
+    const c = document.createElement('canvas'); c.width = J.W; c.height = J.H;
+    const g = c.getContext('2d'), out = g.createImageData(J.W, J.H);
+    composite(J, out); g.putImageData(out, 0, 0);
+    const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+    if (!blob) throw new Error('no blob');
+    const base = (uploaded ? imgName.replace(/\.[^.]+$/, '') : 'penwander') .replace(/[^\w-]+/g, '-').slice(0, 40) || 'penwander';
+    const name = `${base}-dust.png`;
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    toast('Saved ' + name);
+  } catch(e){ toast('Couldn’t save the PNG. Try a smaller size.'); }
+  saving = false; btn.disabled = false; btn.textContent = 'Save PNG';
+}
+$('#btnSave').addEventListener('click', save);
+
+// ---------- loading pictures ----------
+let toastT = 0;
+function toast(msg){ const el = $('#toast'); el.textContent = msg; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => el.hidden = true, 2600); }
+function loadFile(file){
+  if (!file || !/^image\//.test(file.type)){ toast('That file isn’t an image. Try a JPG, PNG or WebP.'); return; }
+  const url = URL.createObjectURL(file), im = new Image();
+  im.onload = () => {
+    const s = Math.min(1, 2000 / Math.max(im.width, im.height));
+    const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(im.width*s)); c.height = Math.max(1, Math.round(im.height*s));
+    c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+    URL.revokeObjectURL(url);
+    img = c; uploaded = true; imgName = file.name || 'Pasted picture';
+    $('#capImg').textContent = imgName; $('#stName').textContent = imgName.length > 14 ? imgName.slice(0, 13) + '…' : imgName;
+    syncUI(); start(true);
+    toast('Turning ' + imgName + ' into dust');
+  };
+  im.onerror = () => { URL.revokeObjectURL(url); toast('Couldn’t read that image. Try another file.'); };
+  im.src = url;
+}
+document.querySelectorAll('[data-pick]').forEach(b => b.addEventListener('click', () => $('#file').click()));
+$('#file').addEventListener('change', e => { loadFile(e.target.files[0]); e.target.value = ''; });
+let dragDepth = 0;
+window.addEventListener('dragenter', e => { if ([...(e.dataTransfer?.types || [])].includes('Files')){ e.preventDefault(); dragDepth++; $('#dropHint').hidden = false; } });
+window.addEventListener('dragleave', () => { dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) $('#dropHint').hidden = true; });
+window.addEventListener('dragover', e => e.preventDefault());
+window.addEventListener('drop', e => { e.preventDefault(); dragDepth = 0; $('#dropHint').hidden = true; loadFile(e.dataTransfer?.files?.[0]); });
+window.addEventListener('paste', e => { const it = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith('image/')); if (it){ e.preventDefault(); loadFile(it.getAsFile()); } });
+window.addEventListener('keydown', e => {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.target.closest && e.target.closest('input[type=text],input[type=number],select,textarea')) return;
+  const k = e.key.toLowerCase();
+  if (k === 'n') newSeed(); else if (k === 'r') start(true); else if (k === 's') save();
+});
+
+img = sample(); syncUI(); start(true);
+let lastBox = '';
+new ResizeObserver(() => { const r = $('#area').getBoundingClientRect(), key = Math.round(r.width) + 'x' + Math.round(r.height); if (key !== lastBox){ const first = !lastBox; lastBox = key; if (!first) { clearTimeout(rebuild); rebuild = setTimeout(() => start(false), 150); } } }).observe($('#area'));
+if (document.fonts && document.fonts.load) document.fonts.load('800 112px "Syne"').then(() => { if (!uploaded){ img = sample(); start(false); } }).catch(() => {});
+})();
+</script>
+</body>
+</html>
