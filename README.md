@@ -18,6 +18,10 @@ Turn any image into a plotter-style line drawing, or trace it by hand.
 
 Everything runs in the browser. Images are never uploaded anywhere.
 
+## Look
+
+Frosted-glass design: soft gradient tints with a light dusting of specks, thin Outfit type and dot-matrix (Doto) numbers. The theme lives in the `glass-theme` style block at the end of each page's styles.
+
 ## Files
 
 | File | Purpose |
