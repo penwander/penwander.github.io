@@ -13,7 +13,7 @@ Turn any image into a plotter-style line drawing, or trace it by hand.
 - **Trace & draw:** a blank sheet with your image as a faint guide. Draw with a pen, paint with a line brush that uses the same algorithm, erase, undo and redo.
 - **Paper texture:** dots, lines, grid, canvas or grain, with adjustable spacing and strength. Shown on screen and in PNG and PDF exports, left out of the SVG so a plotter won't draw it.
 - **Real paper sizes:** A4, A3, Letter and custom widths in millimetres, with pen tip sizes in mm and an estimated plot time.
-- **Dust:** a separate page where an uploaded picture crumbles into grains and blows away. Choose the wind direction (right, left, up, down, burst, crumble), grain size, wind, swirl, sweep time and dust colour (original, ash or riso CMY), scrub the timeline, bring it back, and record the effect as a video.
+- **Dust:** a separate page that redraws an uploaded picture in dust: thousands of fine grains settle where the picture is light (or dark), saved as a PNG up to 3200 px. Looks (pale dust on black, soot on paper, colour dust), amount, grain size, clumps, scatter, haze, contrast, invert, and wind that blows trails of grains off the picture.
 - **Export:** PNG (up to 4800 px), SVG sized in millimetres with one path per pen (ready for a plotter), and a vector PDF that prints at actual size.
 
 Everything runs in the browser. Images are never uploaded anywhere.
@@ -23,7 +23,7 @@ Everything runs in the browser. Images are never uploaded anywhere.
 | File | Purpose |
 |---|---|
 | `index.html` | The whole app: markup, styles and script in one file |
-| `dust.html` | The Dust page: picture-to-dust effect, self-contained |
+| `dust.html` | The Dust page: redraws a picture in dust and saves it as a PNG |
 | `favicon.svg` | Browser-tab icon |
 | `apple-touch-icon.png`, `icon-512.png` | Home-screen icons |
 | `og-image.png` | Preview image shown when the link is shared |
