@@ -430,6 +430,8 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 .split-knob{position:absolute;top:50%;left:0;transform:translate(-50%,-50%);width:34px;height:34px;border-radius:50%;background:#fff;color:#26211f;display:grid;place-items:center;box-shadow:0 4px 14px rgba(0,0,0,.3);cursor:ew-resize}
 .split-knob svg{width:16px;height:16px}
 .sheet.ba-split canvas{cursor:ew-resize;touch-action:none}
+#sheet{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+#sheet:not(.ba-split):not(.ba-side) canvas{cursor:pointer}
 .ba-tag{position:absolute;top:10px;z-index:3;font:500 11px/1 var(--body);letter-spacing:.02em;color:#fff;background:rgba(20,16,14,.55);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);padding:5px 9px;border-radius:999px;pointer-events:none}
 .ba-before,#sheetB .ba-tag{left:10px}
 .ba-after{right:10px}
@@ -589,7 +591,7 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opa
           <button class="btn" type="button" id="btnReset">Reset all settings</button>
         </div>
       </details>
-      <p class="foot">Shortcuts: <kbd>N</kbd> new variation, <kbd>Q</kbd> before/after views, <kbd>\</kbd> show the original, <kbd>R</kbd> settle again, <kbd>S</kbd> save PNG. Double-click a slider label to reset it. Paste or drop an image anywhere on the page.</p>
+      <p class="foot">Shortcuts: <kbd>N</kbd> new variation, <kbd>Q</kbd> before/after views, <kbd>\</kbd> show the original (or press and hold the picture), <kbd>R</kbd> settle again, <kbd>S</kbd> save PNG. Double-click a slider label to reset it. Paste or drop an image anywhere on the page.</p>
     </aside>
   </main>
   <footer class="site-foot">
@@ -968,7 +970,7 @@ window.addEventListener('keydown', e => {
 });
 
 // ---------- before / after (like Camera Raw: cycle views with Q, swap with \) ----------
-const BA = {mode:'off', split:.5, swapped:false};
+const BA = {mode:'off', split:.5, swapped:false, hold:false};
 const BA_MODES = ['off', 'split', 'side'], BA_NAMES = {off:'Before / After', split:'Split view', side:'Side by side'};
 const cvB = $('#cvB'), ctxB = cvB.getContext('2d');
 function drawBefore(){
@@ -983,11 +985,12 @@ function applyBA(){
   // side by side: the original moves into the left-hand sheet
   if (m === 'side'){ if (cvB.parentElement !== $('#sheetB')) $('#sheetB').prepend(cvB); }
   else if (cvB.parentElement !== $('#sheet')) $('#cv').after(cvB);
-  cvB.hidden = !(m === 'side' || m === 'split' || (m === 'off' && sw));
+  const showBefore = m === 'off' && (sw || BA.hold);
+  cvB.hidden = !(m === 'side' || m === 'split' || showBefore);
   cvB.style.clipPath = m === 'split' ? `inset(0 ${(1 - BA.split) * 100}% 0 0)` : '';
   $('#split').hidden = m !== 'split';
   $('#split').style.left = (BA.split * 100) + '%';
-  $('#tagBefore').hidden = m !== 'split'; $('#tagAfter').hidden = m === 'off';
+  $('#tagBefore').hidden = !(m === 'split' || showBefore); $('#tagAfter').hidden = m === 'off';
   const t = $('#sheetB .ba-tag'); if (t) t.textContent = 'Before';
   $('#btnBA').setAttribute('aria-pressed', String(m !== 'off' || sw));
   $('#baLabel').textContent = m === 'off' && sw ? 'Showing before' : BA_NAMES[m];
@@ -1000,7 +1003,15 @@ $('#btnBA').addEventListener('click', cycleBA);
 // drag the split line (anywhere on the picture works)
 let dragging = false;
 const setSplit = e => { const r = $('#sheet').getBoundingClientRect(); BA.split = clamp((e.clientX - r.left) / r.width, 0, 1); applyBA(); };
-$('#sheet').addEventListener('pointerdown', e => { if (BA.mode !== 'split') return; dragging = true; $('#sheet').setPointerCapture(e.pointerId); setSplit(e); });
+// press and hold the picture to see the original; let go to see the dust again
+let holdT = 0;
+const endHold = () => { clearTimeout(holdT); if (BA.hold){ BA.hold = false; applyBA(); } };
+$('#sheet').addEventListener('pointerdown', e => {
+  if (BA.mode === 'off'){ if (e.button > 0) return; clearTimeout(holdT); holdT = setTimeout(() => { BA.hold = true; applyBA(); }, 120); $('#sheet').setPointerCapture(e.pointerId); return; }
+  if (BA.mode !== 'split') return; dragging = true; $('#sheet').setPointerCapture(e.pointerId); setSplit(e);
+});
+['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => $('#sheet').addEventListener(ev, endHold));
+$('#sheet').addEventListener('contextmenu', e => e.preventDefault());
 $('#sheet').addEventListener('pointermove', e => { if (dragging) setSplit(e); });
 ['pointerup', 'pointercancel'].forEach(ev => $('#sheet').addEventListener(ev, () => dragging = false));
 $('#split').addEventListener('keydown', e => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight'){ e.preventDefault(); BA.split = clamp(BA.split + (e.key === 'ArrowLeft' ? -.05 : .05), 0, 1); applyBA(); } });
