@@ -591,7 +591,7 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opa
           <button class="btn" type="button" id="btnReset">Reset all settings</button>
         </div>
       </details>
-      <p class="foot">Shortcuts: <kbd>N</kbd> new variation, <kbd>Q</kbd> before/after views, <kbd>\</kbd> show the original (or hold the picture for 1.5 seconds), <kbd>R</kbd> settle again, <kbd>S</kbd> save PNG. Double-click a slider label to reset it. Paste or drop an image anywhere on the page.</p>
+      <p class="foot">Shortcuts: <kbd>N</kbd> new variation, <kbd>Q</kbd> before/after views, <kbd>\</kbd> show the original (or hold the picture for 1 second), <kbd>R</kbd> settle again, <kbd>S</kbd> save PNG. Double-click a slider label to reset it. Paste or drop an image anywhere on the page.</p>
     </aside>
   </main>
   <footer class="site-foot">
@@ -1003,11 +1003,11 @@ $('#btnBA').addEventListener('click', cycleBA);
 // drag the split line (anywhere on the picture works)
 let dragging = false;
 const setSplit = e => { const r = $('#sheet').getBoundingClientRect(); BA.split = clamp((e.clientX - r.left) / r.width, 0, 1); applyBA(); };
-// hold the picture for 1.5 seconds to see the original; let go to see the dust again
+// hold the picture for 1 second to see the original; let go to see the dust again
 let holdT = 0;
 const endHold = () => { clearTimeout(holdT); if (BA.hold){ BA.hold = false; applyBA(); } };
 $('#sheet').addEventListener('pointerdown', e => {
-  if (BA.mode === 'off'){ if (e.button > 0) return; clearTimeout(holdT); holdT = setTimeout(() => { BA.hold = true; applyBA(); }, 1500); $('#sheet').setPointerCapture(e.pointerId); return; }
+  if (BA.mode === 'off'){ if (e.button > 0) return; clearTimeout(holdT); holdT = setTimeout(() => { BA.hold = true; applyBA(); }, 1000); $('#sheet').setPointerCapture(e.pointerId); return; }
   if (BA.mode !== 'split') return; dragging = true; $('#sheet').setPointerCapture(e.pointerId); setSplit(e);
 });
 ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => $('#sheet').addEventListener(ev, endHold));
