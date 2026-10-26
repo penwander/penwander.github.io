@@ -253,11 +253,10 @@ img{max-width:100%}
       <div class="toolbar">
         <div class="left">
           <button class="btn" id="btnPick" type="button" data-pick>Upload a picture</button>
-          <button class="btn" id="btnSurprise" type="button" title="Random look and settings (X)">Surprise me</button>
         </div>
         <div class="right">
-          <button class="btn" id="btnSettle" type="button" title="Let the dust settle again (R)">Settle again</button>
-          <button class="btn primary" id="btnSeed" type="button" title="Same settings, new drifts and swirls of dust (N)">New variation</button>
+          <button class="btn" id="btnSettle" type="button" title="Replay the dust settling, slowly (R)">Settle again</button>
+          <button class="btn primary" id="btnSeed" type="button" title="Random look and settings (N)">New variation</button>
         </div>
       </div>
       <div class="sheet-area" id="area">
@@ -326,7 +325,7 @@ img{max-width:100%}
       <details class="grp" open style="--sec:var(--mint)">
         <summary>Settling</summary>
         <div class="grp-body">
-          <div class="ctl"><div class="ctl-row"><label for="patchy">Patchiness</label><output id="o-patchy"></output></div><input type="range" id="patchy" data-k="patchy" min="0" max="1" step="0.05"><p class="hint">Dust gathers in drifts instead of settling evenly. Changes with every new variation.</p></div>
+          <div class="ctl"><div class="ctl-row"><label for="patchy">Patchiness</label><output id="o-patchy"></output></div><input type="range" id="patchy" data-k="patchy" min="0" max="1" step="0.05"><p class="hint">Dust gathers in drifts instead of settling evenly.</p></div>
           <div class="ctl"><div class="ctl-row"><label for="swirl">Swirl</label><output id="o-swirl"></output></div><input type="range" id="swirl" data-k="swirl" min="0" max="1" step="0.05"><p class="hint">Smears the dust as if a finger or a breeze moved it.</p></div>
           <div class="ctl"><div class="ctl-row"><label for="scatter">Scatter</label><output id="o-scatter"></output></div><input type="range" id="scatter" data-k="scatter" min="0" max="12" step="0.25"></div>
           <div class="ctl"><div class="ctl-row"><label for="stray">Stray grains</label><output id="o-stray"></output></div><input type="range" id="stray" data-k="stray" min="0" max="1" step="0.05"><p class="hint">Loose dust sprinkled over the whole surface.</p></div>
@@ -368,7 +367,7 @@ img{max-width:100%}
           <button class="btn" type="button" id="btnReset">Reset all settings</button>
         </div>
       </details>
-      <p class="foot">Shortcuts: <kbd>N</kbd> new variation, <kbd>X</kbd> surprise me, <kbd>R</kbd> settle again, <kbd>S</kbd> save PNG. Double-click a slider label to reset it. Paste or drop an image anywhere on the page.</p>
+      <p class="foot">Shortcuts: <kbd>N</kbd> new variation, <kbd>R</kbd> settle again, <kbd>S</kbd> save PNG. Double-click a slider label to reset it. Paste or drop an image anywhere on the page.</p>
     </aside>
   </main>
   <footer class="site-foot">
@@ -609,7 +608,7 @@ function layout(){
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   previewL = Math.round(Math.max(cw, ch) * dpr);
 }
-function start(animate = true){
+function start(animate = true, dur = 1200){
   if (!img) return;
   layout();
   job = makeJob(previewL);
@@ -618,6 +617,7 @@ function start(animate = true){
   updateCaption();
   cancelAnimationFrame(raf); raf = 0;
   if (!animate){ grains(job, job.total); finishFrame(); return; }
+  job.t0 = performance.now(); job.dur = dur;
   raf = requestAnimationFrame(tick);
 }
 function updateCaption(){
@@ -635,9 +635,9 @@ function finishFrame(){
 function tick(){
   raf = 0;
   if (!job) return;
-  const t0 = performance.now();
-  const per = Math.max(20000, Math.ceil(job.total / 45));
-  while (job.done < job.total && performance.now() - t0 < 14) grains(job, Math.min(per, 40000));
+  const t0 = performance.now(), f = Math.min(1, (t0 - job.t0) / job.dur);
+  const target = f >= 1 ? job.total : Math.ceil(job.total * (1 - Math.pow(1 - f, 2)));
+  while (job.done < target && performance.now() - t0 < 14) grains(job, Math.min(target - job.done, 40000));
   finishFrame();
   if (job.done < job.total) raf = requestAnimationFrame(tick);
 }
@@ -669,8 +669,7 @@ document.querySelectorAll('input[type=range][data-k]').forEach(i => {
 });
 document.querySelectorAll('input[type=color][data-k]').forEach(i => i.addEventListener('input', () => setK(i.dataset.k, i.value)));
 $('#invert').addEventListener('change', e => setK('invert', e.target.checked));
-function newSeed(){ setK('seed', 1 + Math.floor(Math.random() * 99999)); toast('Variation ' + S.seed); }
-function surprise(){
+function newSeed(){
   const R = Math.random, pick = a => a[Math.floor(R() * a.length)];
   const look = pick(Object.keys(LOOKS));
   Object.assign(S, {look, dustCol:LOOKS[look].dust, bgCol:LOOKS[look].bg,
@@ -679,11 +678,10 @@ function surprise(){
     scatter: +(R() * 5).toFixed(2), stray: +(R() * .5).toFixed(2), haze: +(R() * .7).toFixed(2), glow: R() < .4 ? +(R() * .6).toFixed(2) : 0,
     wind: pick(['none', 'none', 'right', 'left', 'up', 'down']), windAmt: +(.2 + R() * .7).toFixed(2), gust: +(R() * .8).toFixed(2),
     seed: 1 + Math.floor(R() * 99999)});
-  persist(); syncUI(); restart(); toast('Surprise: ' + LOOKS[look].label.toLowerCase());
+  persist(); syncUI(); restart(); toast('New variation: ' + LOOKS[look].label.toLowerCase());
 }
 $('#btnSeed').addEventListener('click', newSeed);
-$('#btnSurprise').addEventListener('click', surprise);
-$('#btnSettle').addEventListener('click', () => start(true));
+$('#btnSettle').addEventListener('click', () => start(true, 3000));
 $('#btnReset').addEventListener('click', () => { const png = S.png; S = Object.assign({}, DEF, {png}); persist(); syncUI(); restart(); toast('Settings reset'); });
 
 // ---------- saving ----------
@@ -745,7 +743,7 @@ window.addEventListener('keydown', e => {
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   if (e.target.closest && e.target.closest('input[type=text],input[type=number],input[type=color],select,textarea')) return;
   const k = e.key.toLowerCase();
-  if (k === 'n') newSeed(); else if (k === 'x') surprise(); else if (k === 'r') start(true); else if (k === 's') save();
+  if (k === 'n') newSeed(); else if (k === 'r') start(true, 3000); else if (k === 's') save();
 });
 
 img = sample(); syncUI(); start(true);
