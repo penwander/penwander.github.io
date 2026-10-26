@@ -422,6 +422,23 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 .modes,.site-foot,.preset{box-shadow:var(--frost),0 10px 30px -20px var(--shadow)}
 .stage .toolbar{box-shadow:var(--frost),0 8px 22px -16px var(--shadow)}
 </style>
+<style id="compare">
+.sheets{display:flex;align-items:center;justify-content:center;gap:22px;width:100%;height:100%}
+.sheet .before{position:absolute;inset:0;width:100%;height:100%;display:block}
+.split{position:absolute;top:0;bottom:0;width:0;z-index:2;touch-action:none}
+.split::before{content:"";position:absolute;top:0;bottom:0;left:-1px;width:2px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.18),0 0 12px rgba(0,0,0,.25)}
+.split-knob{position:absolute;top:50%;left:0;transform:translate(-50%,-50%);width:34px;height:34px;border-radius:50%;background:#fff;color:#26211f;display:grid;place-items:center;box-shadow:0 4px 14px rgba(0,0,0,.3);cursor:ew-resize}
+.split-knob svg{width:16px;height:16px}
+.sheet.ba-split canvas{cursor:ew-resize;touch-action:none}
+.ba-tag{position:absolute;top:10px;z-index:3;font:500 11px/1 var(--body);letter-spacing:.02em;color:#fff;background:rgba(20,16,14,.55);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);padding:5px 9px;border-radius:999px;pointer-events:none}
+.ba-before,#sheetB .ba-tag{left:10px}
+.ba-after{right:10px}
+.ba-btn{display:inline-flex;align-items:center;gap:7px}
+.ba-btn svg{width:16px;height:16px;flex:none}
+.ba-btn[aria-pressed="true"]{background:#26211f!important;color:#fff!important;border-color:#26211f!important}
+#sheetB{position:relative}
+#sheetB canvas{position:absolute;inset:0;width:100%;height:100%}
+</style>
 </head>
 <body>
 <div class="app">
@@ -455,16 +472,22 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opa
           <button class="btn" id="btnPick" type="button" data-pick>Upload a picture</button>
         </div>
         <div class="right">
+          <button class="btn ba-btn" id="btnBA" type="button" title="Before / after: cycle views (Q). Swap before and after (\\)" aria-label="Before and after view"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 2.5v11" stroke="currentColor" stroke-width="1.4"/><path d="M1.5 4.5a2 2 0 0 1 2-2H8v11H3.5a2 2 0 0 1-2-2z" fill="currentColor" opacity=".35"/></svg><span id="baLabel">Before / After</span></button>
           <button class="btn" id="btnSettle" type="button" title="Replay the dust settling, slowly (R)">Settle again</button>
           <button class="btn primary" id="btnSeed" type="button" title="Random look and settings (N)">New variation</button>
         </div>
       </div>
       <div class="sheet-area" id="area">
-        <div class="sheet" id="sheet">
-          <canvas id="cv" role="img" aria-label="Your picture drawn in dust"></canvas>
-          <span class="mark tl"></span><span class="mark tr"></span><span class="mark bl"></span><span class="mark br"></span>
+        <div class="sheets" id="sheets">
+          <div class="sheet" id="sheetB" hidden><span class="ba-tag">Before</span></div>
+          <div class="sheet" id="sheet">
+            <canvas id="cv" role="img" aria-label="Your picture drawn in dust"></canvas>
+            <canvas id="cvB" class="before" aria-label="Your original picture" role="img" hidden></canvas>
+            <div class="split" id="split" hidden><span class="split-knob" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M6 4L2 8l4 4M10 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+            <span class="ba-tag ba-before" id="tagBefore" hidden>Before</span><span class="ba-tag ba-after" id="tagAfter" hidden>After</span>
+            <span class="mark tl"></span><span class="mark tr"></span><span class="mark bl"></span><span class="mark br"></span>
+          </div>
         </div>
-        <div class="empty" id="empty"><span>Upload a picture to draw it in dust</span><button class="btn primary" type="button" data-pick>Choose a picture</button></div>
         <div class="drop-hint" id="dropHint" hidden>Drop the picture to draw it in dust</div>
       </div>
       <div class="caption"><span id="capImg">Sample picture</span><span id="capLook"></span></div>
@@ -566,7 +589,7 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opa
           <button class="btn" type="button" id="btnReset">Reset all settings</button>
         </div>
       </details>
-      <p class="foot">Shortcuts: <kbd>N</kbd> new variation, <kbd>R</kbd> settle again, <kbd>S</kbd> save PNG. Double-click a slider label to reset it. Paste or drop an image anywhere on the page.</p>
+      <p class="foot">Shortcuts: <kbd>N</kbd> new variation, <kbd>Q</kbd> before/after views, <kbd>\</kbd> show the original, <kbd>R</kbd> settle again, <kbd>S</kbd> save PNG. Double-click a slider label to reset it. Paste or drop an image anywhere on the page.</p>
     </aside>
   </main>
   <footer class="site-foot">
@@ -798,9 +821,10 @@ function layout(){
   if (!img) return;
   const r = $('#area').getBoundingClientRect(), m = 40;
   const R = dims(1000), ratio = R.W / R.H;
-  let cw = Math.max(50, r.width - m), ch = cw / ratio;
+  const side = BA.mode === 'side', gap = 22, availW = side ? (r.width - m - gap) / 2 : r.width - m;
+  let cw = Math.max(50, availW), ch = cw / ratio;
   if (ch > r.height - m){ ch = Math.max(50, r.height - m); cw = ch * ratio; }
-  const sh = $('#sheet'); sh.style.width = cw + 'px'; sh.style.height = ch + 'px';
+  for (const id of ['#sheet', '#sheetB']){ const sh = $(id); sh.style.width = cw + 'px'; sh.style.height = ch + 'px'; }
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   previewL = Math.round(Math.max(cw, ch) * dpr);
 }
@@ -810,6 +834,7 @@ function start(animate = true, dur = 1200){
   job = makeJob(previewL);
   cv.width = job.W; cv.height = job.H;
   frame = ctx.createImageData(job.W, job.H);
+  drawBefore();
   updateCaption();
   cancelAnimationFrame(raf); raf = 0;
   if (!animate){ grains(job, job.total); finishFrame(); return; }
@@ -848,7 +873,6 @@ function syncUI(){
   $('#rowDustCol').hidden = S.look === 'colour';
   $('#invert').checked = !!S.invert;
   $('#windAmt').disabled = $('#gust').disabled = S.wind === 'none';
-  $('#empty').hidden = uploaded;
 }
 function setK(k, v){
   S[k] = v;
@@ -940,7 +964,47 @@ window.addEventListener('keydown', e => {
   if (e.target.closest && e.target.closest('input[type=text],input[type=number],input[type=color],select,textarea')) return;
   const k = e.key.toLowerCase();
   if (k === 'n') newSeed(); else if (k === 'r') start(true, 3000); else if (k === 's') save();
+  else if (k === 'q') cycleBA(); else if (e.key === '\\'){ e.preventDefault(); swapBA(); }
 });
+
+// ---------- before / after (like Camera Raw: cycle views with Q, swap with \) ----------
+const BA = {mode:'off', split:.5, swapped:false};
+const BA_MODES = ['off', 'split', 'side'], BA_NAMES = {off:'Before / After', split:'Split view', side:'Side by side'};
+const cvB = $('#cvB'), ctxB = cvB.getContext('2d');
+function drawBefore(){
+  if (!job || !img) return;
+  cvB.width = job.W; cvB.height = job.H;
+  ctxB.fillStyle = S.bgCol; ctxB.fillRect(0, 0, job.W, job.H);
+  ctxB.imageSmoothingQuality = 'high'; ctxB.drawImage(img, job.p, job.p, job.iw, job.ih);
+}
+function applyBA(){
+  const m = BA.mode, sw = BA.swapped;
+  $('#sheetB').hidden = m !== 'side';
+  // side by side: the original moves into the left-hand sheet
+  if (m === 'side'){ if (cvB.parentElement !== $('#sheetB')) $('#sheetB').prepend(cvB); }
+  else if (cvB.parentElement !== $('#sheet')) $('#cv').after(cvB);
+  cvB.hidden = !(m === 'side' || m === 'split' || (m === 'off' && sw));
+  cvB.style.clipPath = m === 'split' ? `inset(0 ${(1 - BA.split) * 100}% 0 0)` : '';
+  $('#split').hidden = m !== 'split';
+  $('#split').style.left = (BA.split * 100) + '%';
+  $('#tagBefore').hidden = m !== 'split'; $('#tagAfter').hidden = m === 'off';
+  const t = $('#sheetB .ba-tag'); if (t) t.textContent = 'Before';
+  $('#btnBA').setAttribute('aria-pressed', String(m !== 'off' || sw));
+  $('#baLabel').textContent = m === 'off' && sw ? 'Showing before' : BA_NAMES[m];
+  $('#sheet').classList.toggle('ba-split', m === 'split');
+  $('#sheet').classList.toggle('ba-side', m === 'side');
+}
+function cycleBA(){ BA.mode = BA_MODES[(BA_MODES.indexOf(BA.mode) + 1) % BA_MODES.length]; BA.swapped = false; applyBA(); start(false); }
+function swapBA(){ if (BA.mode !== 'off'){ BA.mode = 'off'; BA.swapped = true; applyBA(); start(false); return; } BA.swapped = !BA.swapped; applyBA(); }
+$('#btnBA').addEventListener('click', cycleBA);
+// drag the split line (anywhere on the picture works)
+let dragging = false;
+const setSplit = e => { const r = $('#sheet').getBoundingClientRect(); BA.split = clamp((e.clientX - r.left) / r.width, 0, 1); applyBA(); };
+$('#sheet').addEventListener('pointerdown', e => { if (BA.mode !== 'split') return; dragging = true; $('#sheet').setPointerCapture(e.pointerId); setSplit(e); });
+$('#sheet').addEventListener('pointermove', e => { if (dragging) setSplit(e); });
+['pointerup', 'pointercancel'].forEach(ev => $('#sheet').addEventListener(ev, () => dragging = false));
+$('#split').addEventListener('keydown', e => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight'){ e.preventDefault(); BA.split = clamp(BA.split + (e.key === 'ArrowLeft' ? -.05 : .05), 0, 1); applyBA(); } });
+applyBA();
 
 syncUI(); loadSample();
 let lastBox = '';
