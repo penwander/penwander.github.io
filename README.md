@@ -14,6 +14,7 @@ Turn any image into a plotter-style line drawing, or trace it by hand.
 - **Paper texture:** dots, lines, grid, canvas or grain, with adjustable spacing and strength. Shown on screen and in PNG and PDF exports, left out of the SVG so a plotter won't draw it.
 - **Real paper sizes:** A4, A3, Letter and custom widths in millimetres, with pen tip sizes in mm and an estimated plot time.
 - **Dust:** a separate page that redraws an uploaded picture in dust: thousands of fine grains settle where the picture is light (or dark), saved as a PNG up to 3200 px. Looks (pale dust on black, soot on paper, colour dust), amount, grain size, clumps, scatter, haze, contrast, invert, and wind that blows trails of grains off the picture.
+- **Water:** a separate page that shows an uploaded picture through water, saved as a PNG up to 3200 px. Three looks: ripples (waves and rings from falling drops), under water (with the bright web of sunlight caustics) and rain on glass (raindrops and trails on misted glass). Water colour (clear, sea, lagoon, pond), wave size, choppiness, distortion, shine and softness.
 - **Export:** PNG (up to 4800 px), SVG sized in millimetres with one path per pen (ready for a plotter), and a vector PDF that prints at actual size.
 
 Everything runs in the browser. Images are never uploaded anywhere.
@@ -24,6 +25,7 @@ Everything runs in the browser. Images are never uploaded anywhere.
 |---|---|
 | `index.html` | The whole app: markup, styles and script in one file |
 | `dust.html` | The Dust page: redraws a picture in dust and saves it as a PNG |
+| `water.html` | The Water page: shows a picture through water and saves it as a PNG |
 | `favicon.svg` | Browser-tab icon |
 | `apple-touch-icon.png`, `icon-512.png` | Home-screen icons |
 | `og-image.png` | Preview image shown when the link is shared |
