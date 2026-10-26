@@ -395,12 +395,12 @@ const LOOKS = {
 };
 const DEF = {look:'dark', dustCol:LOOKS.dark.dust, bgCol:LOOKS.dark.bg, glow:0, texture:.3,
   amount:320, size:1, shape:'round', clumps:.3, sparkle:.15,
-  patchy:.55, swirl:.35, scatter:1.5, stray:.15, haze:.35, fade:.15, margin:.05,
+  patchy:.55, swirl:0, scatter:1.5, stray:.15, haze:.35, fade:.15, margin:.05,
   contrast:1.3, bright:0, detail:.85, invert:false,
   wind:'none', windAmt:.5, gust:.3, png:'2400', seed:7};
 let S = Object.assign({}, DEF);
-try { const s = JSON.parse(localStorage.getItem('penwander-dust-v3') || 'null'); if (s) Object.assign(S, s); } catch(e){}
-const persist = () => { try { localStorage.setItem('penwander-dust-v3', JSON.stringify(S)); } catch(e){} };
+try { const s = JSON.parse(localStorage.getItem('penwander-dust-v4') || 'null'); if (s) Object.assign(S, s); } catch(e){}
+const persist = () => { try { localStorage.setItem('penwander-dust-v4', JSON.stringify(S)); } catch(e){} };
 const pct = v => Math.round(v*100) + '%';
 const FMT = {amount: v => Math.round(v) + 'k', size: v => (+v).toFixed(2) + '×', clumps:pct, sparkle:pct, scatter: v => (+v).toFixed(1) + ' px',
   haze:pct, contrast: v => (+v).toFixed(2) + '×', bright: v => (v > 0 ? '+' : '') + Math.round(v*100), detail:pct, windAmt:pct, gust:pct,
