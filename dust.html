@@ -20,7 +20,7 @@
 <meta name="twitter:image" content="https://penwander.github.io/og-image.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=Doto:wght@600;800&family=Syne:wght@600;700;800&family=Onest:wght@400;500;600;700&family=Martian+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Doto:wght@600;800&display=swap">
 <style>
 /* Layout: riso print shop. Bold blue print bed with halftone dots holds the sheet; color-coded ink trays (control sections) on the right; overprinted pink/blue/yellow as the signature. */
 :root{
@@ -30,9 +30,9 @@
   --accent:var(--pink); --on-accent:#ffffff; --ink-shadow:var(--blue);
   --shadow:rgba(23,19,61,.16); --blend:multiply;
   --tile-bg:#fdfdfb; --tile-edge:#dcdcf2; --mk-y:#ffcf2e; --mk-b:#2d5bff; --mk-p:#ff3e9a; --mk-blend:multiply;
-  --display:"Syne", "Avenir Next", "Segoe UI", system-ui, sans-serif;
-  --body:"Onest", "Helvetica Neue", Arial, system-ui, sans-serif;
-  --mono:"Martian Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --display:"Outfit", system-ui, sans-serif;
+  --body:"Outfit", system-ui, sans-serif;
+  --mono:"Outfit", system-ui, sans-serif;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
@@ -234,8 +234,8 @@ img{max-width:100%}
   --grad-magenta:linear-gradient(135deg,#b3168c 0%,#dc4db5 55%,#f2a6d9 100%);
   --grad-sage:linear-gradient(160deg,#7f8c88 0%,#a9b1aa 55%,#d8ccb6 100%);
   --grad-coral:linear-gradient(135deg,#df6e57 0%,#f0a487 100%);
-  --display:"Outfit","Onest",system-ui,sans-serif; --body:"Outfit","Onest",system-ui,sans-serif; --mono:"Martian Mono",ui-monospace,monospace;
-  --dots:"Doto","Martian Mono",ui-monospace,monospace;
+  --display:"Outfit",system-ui,sans-serif; --body:"Outfit",system-ui,sans-serif; --mono:"Outfit",system-ui,sans-serif;
+  --dots:"Doto",ui-monospace,monospace;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
@@ -363,7 +363,6 @@ kbd{background:rgba(255,255,255,.6);border-color:var(--glass-edge);border-radius
 
 /* refinements */
 .stats dd,.ctl-row output,.scrub output{font-weight:800}
-#stName{font:500 16px/1.25 var(--body);letter-spacing:0}
 .grp{background:linear-gradient(165deg, color-mix(in srgb, var(--sec) 16%, transparent) 0%, transparent 45%), var(--surface)}
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){--grad-bronze:linear-gradient(160deg,#24140f 0%,#4a2c1f 40%,#7d5838 75%,#a9875c 100%)}
@@ -441,6 +440,7 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 #sheetB{position:relative}
 #sheetB canvas{position:absolute;inset:0;width:100%;height:100%}
 </style>
+<style id="fonts">kbd,input[type=number],.color-row output,.caption{font-variant-numeric:tabular-nums}</style>
 </head>
 <body>
 <div class="app">
@@ -460,9 +460,6 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opa
     </nav>
     <dl class="stats" aria-live="off">
       <div><dt>Grains</dt><dd id="stGrains">0</dd></div>
-      <div><dt>Picture</dt><dd id="stName">Sample</dd></div>
-      <div><dt>PNG size</dt><dd id="stSize">0 px</dd></div>
-      <div><dt>Status</dt><dd><span class="state" id="stState">Settling</span></dd></div>
     </dl>
   </header>
   <div class="progress" aria-hidden="true"><i id="prog"></i></div>
@@ -586,6 +583,7 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opa
               <button type="button" data-v="3200">3200 px</button>
             </div>
           </div>
+          <p class="hint" id="pngSize"></p>
           <button class="btn primary" type="button" id="btnSave">Save PNG</button>
           <p class="hint">The saved image is redrawn at full size with the same grains as the preview.</p>
           <button class="btn" type="button" id="btnReset">Reset all settings</button>
@@ -844,7 +842,7 @@ function start(animate = true, dur = 1200){
   raf = requestAnimationFrame(tick);
 }
 function updateCaption(){
-  const d = dims(+S.png); $('#stSize').textContent = `${d.W} × ${d.H}`;
+  const d = dims(+S.png); $('#pngSize').textContent = `Saves at ${d.W} × ${d.H} px.`;
   $('#capLook').textContent = `${LOOKS[S.look].label}${S.wind !== 'none' ? ' · wind ' + S.wind : ''} · variation ${S.seed}`;
 }
 function finishFrame(){
@@ -853,7 +851,6 @@ function finishFrame(){
   if (doneNow) applyGlow(cv, job);
   $('#prog').style.width = (f * 100).toFixed(1) + '%';
   $('#stGrains').textContent = Math.round(job.done / (job.k * job.k)).toLocaleString('en-US');
-  const st = $('#stState'); st.textContent = doneNow ? 'Done' : 'Settling'; st.classList.toggle('done', doneNow);
 }
 function tick(){
   raf = 0;
@@ -946,7 +943,7 @@ function loadFile(file){
     c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
     URL.revokeObjectURL(url);
     img = c; uploaded = true; imgName = file.name || 'Pasted picture';
-    $('#capImg').textContent = imgName; $('#stName').textContent = imgName.length > 14 ? imgName.slice(0, 13) + '…' : imgName;
+    $('#capImg').textContent = imgName;
     syncUI(); start(true);
     toast('Turning ' + imgName + ' into dust');
   };

@@ -20,7 +20,7 @@
 <meta name="twitter:image" content="https://penwander.github.io/og-image.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=Doto:wght@600;800&family=Syne:wght@600;700;800&family=Onest:wght@400;500;600;700&family=Martian+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Doto:wght@600;800&display=swap">
 <style>
 /* Layout: riso print shop. Bold blue print bed with halftone dots holds the sheet; color-coded ink trays (control sections) on the right; overprinted pink/blue/yellow as the signature. */
 :root{
@@ -30,9 +30,9 @@
   --accent:var(--pink); --on-accent:#ffffff; --ink-shadow:var(--blue);
   --shadow:rgba(23,19,61,.16); --blend:multiply;
   --tile-bg:#fdfdfb; --tile-edge:#dcdcf2; --mk-y:#ffcf2e; --mk-b:#2d5bff; --mk-p:#ff3e9a; --mk-blend:multiply;
-  --display:"Syne", "Avenir Next", "Segoe UI", system-ui, sans-serif;
-  --body:"Onest", "Helvetica Neue", Arial, system-ui, sans-serif;
-  --mono:"Martian Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --display:"Outfit", system-ui, sans-serif;
+  --body:"Outfit", system-ui, sans-serif;
+  --mono:"Outfit", system-ui, sans-serif;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
@@ -225,8 +225,8 @@ img{max-width:100%}
   --grad-magenta:linear-gradient(135deg,#b3168c 0%,#dc4db5 55%,#f2a6d9 100%);
   --grad-sage:linear-gradient(160deg,#7f8c88 0%,#a9b1aa 55%,#d8ccb6 100%);
   --grad-coral:linear-gradient(135deg,#df6e57 0%,#f0a487 100%);
-  --display:"Outfit","Onest",system-ui,sans-serif; --body:"Outfit","Onest",system-ui,sans-serif; --mono:"Martian Mono",ui-monospace,monospace;
-  --dots:"Doto","Martian Mono",ui-monospace,monospace;
+  --display:"Outfit",system-ui,sans-serif; --body:"Outfit",system-ui,sans-serif; --mono:"Outfit",system-ui,sans-serif;
+  --dots:"Doto",ui-monospace,monospace;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
@@ -413,6 +413,7 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 .modes,.site-foot,.preset{box-shadow:var(--frost),0 10px 30px -20px var(--shadow)}
 .stage .toolbar{box-shadow:var(--frost),0 8px 22px -16px var(--shadow)}
 </style>
+<style id="fonts">kbd,input[type=number],.color-row output,.caption{font-variant-numeric:tabular-nums}</style>
 </head>
 <body>
 <div class="app">
@@ -801,7 +802,7 @@ function sampleRamp(){
   const c = mk(1000, 1000), g = c.getContext('2d');
   g.fillStyle = '#fff'; g.fillRect(0, 0, 1000, 1000);
   for (let i = 0; i <= 10; i++){ const v = Math.round(255*(1 - i/10)); g.fillStyle = `rgb(${v},${v},${v})`; g.fillRect(60 + i*80, 90, 80, 200); }
-  g.fillStyle = '#111'; g.font = '500 24px "Martian Mono", monospace'; g.textAlign = 'center';
+  g.fillStyle = '#111'; g.font = '500 26px "Outfit", sans-serif'; g.textAlign = 'center';
   for (let i = 0; i <= 10; i += 2) g.fillText(i*10 + '%', 100 + i*80, 330);
   const lin = g.createLinearGradient(60, 0, 940, 0); lin.addColorStop(0, '#fff'); lin.addColorStop(1, '#000');
   g.fillStyle = lin; g.fillRect(60, 390, 880, 130);
@@ -812,8 +813,8 @@ function sampleRamp(){
 function sampleText(t){
   const c = mk(1400, 800), g = c.getContext('2d');
   g.fillStyle = '#fff'; g.fillRect(0, 0, 1400, 800);
-  let size = 420; g.font = `800 ${size}px "Syne", sans-serif`;
-  const m = g.measureText(t).width; if (m > 1260) { size = size * 1260 / m; g.font = `800 ${size}px "Syne", sans-serif`; }
+  let size = 420; g.font = `700 ${size}px "Outfit", sans-serif`;
+  const m = g.measureText(t).width; if (m > 1260) { size = size * 1260 / m; g.font = `700 ${size}px "Outfit", sans-serif`; }
   const gr = g.createLinearGradient(0, 200, 0, 620); gr.addColorStop(0, '#000'); gr.addColorStop(1, '#5a5a5a');
   g.fillStyle = gr; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(t, 700, 410);
   return c;
@@ -1573,7 +1574,7 @@ new ResizeObserver(() => layout()).observe($('#sheetArea'));
 
 buildUI(); wireExport(); sync(); process(); loadTrace(); getDl();
 figureImg.src = FIGURE_SRC;
-if (document.fonts && document.fonts.load) document.fonts.load('800 200px "Syne"').then(() => { if (S.source === 'text') process(); }).catch(() => {});
+if (document.fonts && document.fonts.load) document.fonts.load('700 200px "Outfit"').then(() => { if (S.source === 'text') process(); }).catch(() => {});
 requestAnimationFrame(tick);
 })();
 </script>
